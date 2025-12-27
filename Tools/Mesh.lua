@@ -1,40 +1,54 @@
 Tool = script.Parent.Parent;
 Core = require(Tool.Core);
+Sounds = Tool:WaitForChild("Sounds");
 local Vendor = Tool:WaitForChild('Vendor')
-local UI = Tool:WaitForChild('UI')
-local Libraries = Tool:WaitForChild('Libraries')
+local UI = Core.UIFolder
+local Libraries = Core.Libraries
+local BoundingBox = require(Tool.Core.BoundingBox)
 
 -- Libraries
 local ListenForManualWindowTrigger = require(Tool.Core:WaitForChild('ListenForManualWindowTrigger'))
 local Roact = require(Vendor:WaitForChild('Roact'))
 local ColorPicker = require(UI:WaitForChild('ColorPicker'))
-local Dropdown = require(UI:WaitForChild('Dropdown'))
 local Signal = require(Libraries:WaitForChild('Signal'))
 
 -- Import relevant references
 Selection = Core.Selection;
 Support = Core.Support;
 Security = Core.Security;
-Support.ImportServices();
+Services = Support.ImportServices();
 
 -- Initialize the tool
 local MeshTool = {
 	Name = 'Mesh Tool';
 	Color = BrickColor.new 'Bright violet';
+	Scaling = 1;
 
 	-- State
 	CurrentType = nil;
 
 	-- Signals
 	OnTypeChanged = Signal.new();
+	OnScalingChanged = Signal.new();
 }
 
-MeshTool.ManualText = [[<font face="GothamBlack" size="16">Mesh Tool  🛠</font>
+if table.find(Core.Options.ToolsBlacklist, MeshTool.Name) then
+	return MeshTool
+end
+
+MeshTool.ManualText = [[<font weight="900" size="24"><u><i>Mesh Tool  🛠</i></u></font>
 Lets you add meshes to parts.<font size="6"><br /></font>
 
 <b>TIP:</b> You can paste the link to anything with a mesh (e.g. a hat, gear, etc) and it will automatically find the right mesh and texture IDs.<font size="6"><br /></font>
 
-<b>NOTE:</b> If HttpService is not enabled, you must type the mesh or image asset ID directly.]]
+<b>TIP:</b> If allowed, you can choose how will the mesh be managed.<font size="6"><br /></font>
+ <font color="rgb(150, 150, 150)">•</font> <b>Disabling proportions</b> will cause the mesh to strictly fit your part. This might cause the mesh to be stretched.
+ <font color="rgb(150, 150, 150)">•</font> <b>Part-wise proportions</b> will make the mesh keep its proportion, while keeping it inside the part's bounds.
+ <font color="rgb(150, 150, 150)">•</font> <b>Mesh-wise proportions</b> will act like part-wise proportions, while resizing the map to the mesh's size.
+
+All those settings do only apply if Roblox gets the mesh.
+
+<b>NOTE:</b> If HttpService is not enabled, you might have to type the mesh or image asset ID directly if the game doesn't allow Roblox to use their own servers.]]
 
 -- Container for temporary connections (disconnected automatically)
 local Connections = {};
@@ -44,6 +58,17 @@ function MeshTool.Equip()
 
 	-- Start up our interface
 	ShowUI();
+	if Selection.DisableHighlights then
+		BoundingBox.StartBoundingBox(function () end)
+	end
+
+	Connections.BoundingBox = Selection.Changed:Connect(function()
+		if Selection.DisableHighlights and not BoundingBox.GetBoundingBox() then
+			BoundingBox.StartBoundingBox(function () end)
+		elseif not Selection.DisableHighlights and BoundingBox.GetBoundingBox() then
+			BoundingBox.ClearBoundingBox()
+		end
+	end)
 
 end;
 
@@ -53,6 +78,7 @@ function MeshTool.Unequip()
 	-- Clear unnecessary resources
 	HideUI();
 	ClearConnections();
+	BoundingBox.ClearBoundingBox();
 
 end;
 
@@ -67,6 +93,10 @@ function ClearConnections()
 end;
 
 function ShowUI()
+	
+	UI = Core.UIFolder
+	local Dropdown = require(UI:WaitForChild('Dropdown'))
+	
 	-- Creates and reveals the UI
 
 	-- Reveal UI if already created
@@ -84,7 +114,7 @@ function ShowUI()
 	end;
 
 	-- Create the UI
-	MeshTool.UI = Core.Tool.Interfaces.BTMeshToolGUI:Clone();
+	MeshTool.UI = Core.Interfaces.BTMeshToolGUI:Clone();
 	MeshTool.UI.Parent = Core.UI;
 	MeshTool.UI.Visible = true;
 
@@ -103,16 +133,23 @@ function ShowUI()
 		Sphere = Enum.MeshType.Sphere,
 		Wedge = Enum.MeshType.Wedge
 	};
+	
+	local ScalingTypes = {
+		Stretch = 0,
+		Fit = 1,
+		Adaptive = 2,
+	};
 
 	-- Sort the mesh types
-	SortedMeshTypes = Support.Keys(MeshTypes);
+	local SortedMeshTypes = Support.Keys(MeshTypes);
+	local SortedScalingTypes = Support.Keys(ScalingTypes);
 	table.sort(SortedMeshTypes);
 
 	-- Create type dropdown
 	local function BuildTypeDropdown()
 		return Roact.createElement(Dropdown, {
 			Position = UDim2.new(0, 40, 0, 0);
-			Size = UDim2.new(1, -40, 0, 25);
+			Size = UDim2.new(1, -60, 0, 25);
 			Options = SortedMeshTypes;
 			MaxRows = 6;
 			CurrentOption = MeshTool.CurrentType;
@@ -121,11 +158,33 @@ function ShowUI()
 			end;
 		})
 	end
+	
+	-- Create scaling dropdown
+	local function BuildScalingDropdown()
+		return Roact.createElement(Dropdown, {
+			Position = UDim2.new(0, 80, 0, 0);
+			Size = UDim2.new(1, -100, 0, 25);
+			Options = SortedScalingTypes;
+			MaxRows = 6;
+			CurrentOption = Support.FlipTable(ScalingTypes)[MeshTool.Scaling];
+			OnOptionSelected = function (Option)
+				MeshTool.Scaling = ScalingTypes[Option]
+				MeshTool.OnScalingChanged:Fire()
+			end;
+		})
+	end
+
 
 	-- Mount type dropdown
 	local TypeDropdownHandle = Roact.mount(BuildTypeDropdown(), MeshTool.UI.TypeOption, 'Dropdown')
 	MeshTool.OnTypeChanged:Connect(function ()
 		Roact.update(TypeDropdownHandle, BuildTypeDropdown())
+	end)
+	
+	-- Mount scaling dropdown
+	local ScalingDropdownHandle = Roact.mount(BuildScalingDropdown(), MeshTool.UI.ScalingOption, 'Dropdown')
+	MeshTool.OnScalingChanged:Connect(function ()
+		Roact.update(ScalingDropdownHandle, BuildScalingDropdown())
 	end)
 
 	-- Enable the scale inputs
@@ -196,11 +255,32 @@ function ShowUI()
 
 	-- Enable the mesh adding button
 	AddButton.Button.MouseButton1Click:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Add"))
 		AddMeshes();
 	end);
+	AddButton.Button.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end);
 	RemoveButton.Button.MouseButton1Click:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Remove"))
 		RemoveMeshes();
 	end);
+	RemoveButton.Button.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end);
+	
+	--[[
+	for _, Button in MeshTool.UI.ProportionOption:GetChildren() do
+		if Button:FindFirstChild("Button") then
+			Button.Button.Activated:Connect(function()
+				game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Press"))
+				MeshTool.Proportions = tonumber(Button.Name)
+				Core.ToggleSwitch(MeshTool.Proportions, MeshTool.UI.ProportionOption);
+			end)
+		end
+	end
+	
+	Core.ToggleSwitch(MeshTool.Proportions, MeshTool.UI.ProportionOption);]]
 
 	-- Hook up manual triggering
 	local SignatureButton = MeshTool.UI:WaitForChild('Title'):WaitForChild('Signature')
@@ -231,7 +311,7 @@ function UpdateUI()
 	-- Check if there's a file mesh in the selection
 	local FileMeshInSelection = false;
 	for _, Mesh in pairs(GetMeshes()) do
-		if Mesh.MeshType == Enum.MeshType.FileMesh then
+		if Mesh:IsA("SpecialMesh") and Mesh.MeshType == Enum.MeshType.FileMesh then
 			FileMeshInSelection = true;
 			break;
 		end;
@@ -296,6 +376,7 @@ function UpdateUI()
 	VertexColorIndicator.Parent.Visible = false;
 	MeshTool.UI.ScaleOption.Visible = false;
 	MeshTool.UI.OffsetOption.Visible = false;
+	MeshTool.UI.ScalingOption.Visible = false;
 
 	-- Update the UI to display options depending on the mesh type
 	local DisplayedItems;
@@ -304,16 +385,14 @@ function UpdateUI()
 
 	-- Each selected part has a mesh, including a file mesh
 	elseif #Meshes == #Selection.Parts and FileMeshInSelection then
-		DisplayedItems = { MeshTool.UI.TypeOption, MeshTool.UI.ScaleOption, MeshTool.UI.OffsetOption, MeshIdInput.Parent, TextureIdInput.Parent, VertexColorIndicator.Parent, RemoveButton };
-
+		DisplayedItems = { MeshTool.UI.TypeOption, Core.Options.BetterMeshSizeControl and MeshTool.UI.ScalingOption or nil, MeshTool.UI.ScaleOption, MeshTool.UI.OffsetOption, MeshIdInput.Parent, TextureIdInput.Parent, VertexColorIndicator.Parent, RemoveButton };
 	-- Each selected part has a mesh
 	elseif #Meshes == #Selection.Parts and not FileMeshInSelection then
 		DisplayedItems = { MeshTool.UI.TypeOption, MeshTool.UI.ScaleOption, MeshTool.UI.OffsetOption, RemoveButton };
 
 	-- Only some selected parts have meshes, including a file mesh
 	elseif #Meshes ~= #Selection.Parts and FileMeshInSelection then
-		DisplayedItems = { AddButton, MeshTool.UI.TypeOption, MeshTool.UI.ScaleOption, MeshTool.UI.OffsetOption, MeshIdInput.Parent, TextureIdInput.Parent, VertexColorIndicator.Parent, RemoveButton };
-
+		DisplayedItems = { AddButton, MeshTool.UI.TypeOption, Core.Options.BetterMeshSizeControl and MeshTool.UI.ScalingOption or nil, MeshTool.UI.ScaleOption, MeshTool.UI.OffsetOption, MeshIdInput.Parent, TextureIdInput.Parent, VertexColorIndicator.Parent, RemoveButton };
 	-- Only some selected parts have meshes
 	elseif #Meshes ~= #Selection.Parts and not FileMeshInSelection then
 		DisplayedItems = { AddButton, MeshTool.UI.TypeOption, MeshTool.UI.ScaleOption, MeshTool.UI.OffsetOption, RemoveButton };
@@ -428,7 +507,12 @@ function DisplayLinearLayout(Items, Container, StartPosition, Padding)
 	local Sum = 0;
 
 	-- Go through each item
-	for ItemIndex, Item in ipairs(Items) do
+	for i = 1, #Items do--ItemIndex, Item in ipairs(Items) do
+		local Item = Items[i]
+		
+		if Item == nil then
+			continue
+		end
 
 		-- Make the item visible
 		Item.Visible = true;
@@ -447,7 +531,7 @@ function DisplayLinearLayout(Items, Container, StartPosition, Padding)
 	end;
 
 	-- Resize the container to fit the new layout
-	Container.Size = UDim2.new(0, 200, 0, 30 + Sum);
+	Container.Size = UDim2.new(0, 220, 0, 30 + Sum);
 
 end;
 
@@ -683,33 +767,33 @@ function SetMeshId(AssetId)
 	-- Attempt a mesh extraction on the given asset
 	Core.Try(Core.SyncAPI.Invoke, Core.SyncAPI, 'ExtractMeshFromAsset', AssetId)
 		:Then(function (ExtractionData)
-
+			print(ExtractionData)
+			
 			-- Ensure extraction succeeded
 			assert(ExtractionData.success, 'Extraction failed');
-
 			-- Apply any mesh found
-			local MeshId = ExtractionData.meshID;
+			local MeshId = ExtractionData.meshID
 			if MeshId then
-				Changes.MeshId = 'rbxassetid://' .. MeshId;
-			end;
+				Changes.MeshId = 'rbxassetid://' .. MeshId
+			end
 
 			-- Apply any texture found
-			local TextureId = ExtractionData.textureID;
+			local TextureId = ExtractionData.textureID
 			if TextureId then
-				Changes.TextureId = 'rbxassetid://' .. TextureId;
-			end;
+				Changes.TextureId = 'rbxassetid://' .. TextureId
+			end
 
 			-- Apply any vertex color found
-			local VertexColor = ExtractionData.tint;
+			local VertexColor = ExtractionData.tint
 			if VertexColor then
-				Changes.VertexColor = Vector3.new(VertexColor.x, VertexColor.y, VertexColor.z);
-			end;
+				Changes.VertexColor = Vector3.new(VertexColor.x, VertexColor.y, VertexColor.z)
+			end
 
 			-- Apply any scale found
-			local Scale = ExtractionData.scale;
+			local Scale = ExtractionData.scale
 			if Scale then
-				Changes.Scale = Vector3.new(Scale.x, Scale.y, Scale.z);
-			end;
+				Changes.Scale = Vector3.new(Scale.x, Scale.y, Scale.z)
+			end
 
 		end);
 
@@ -735,6 +819,14 @@ function SetMeshId(AssetId)
 		table.insert(HistoryRecord.After, After);
 
 	end;
+	
+	if MeshTool.Scaling == 2 then
+		for _, Part in Selection.Parts do
+
+			table.insert(HistoryRecord.PreviousPartSizes, {Part = Part, Size = Part.Size, CFrame = Part.CFrame})
+
+		end;
+	end
 
 	-- Register the changes
 	RegisterChange();
@@ -782,6 +874,14 @@ function SetTextureId(AssetId)
 		table.insert(HistoryRecord.After, After);
 
 	end;
+	
+	if MeshTool.Scaling == 2 then
+		for _, Part in Selection.Parts do
+
+			table.insert(HistoryRecord.PreviousPartSizes, {Part = Part, Size = Part.Size, CFrame = Part.CFrame})
+
+		end;
+	end
 
 	-- Register the changes
 	RegisterChange();
@@ -794,7 +894,9 @@ function TrackChange()
 	HistoryRecord = {
 		Before = {};
 		After = {};
+		PreviousPartSizes = {};
 		Selection = Selection.Items;
+		Scaling = MeshTool.Scaling;
 
 		Unapply = function (Record)
 			-- Reverts this change
@@ -803,7 +905,9 @@ function TrackChange()
 			Selection.Replace(Record.Selection)
 
 			-- Send the change request
-			Core.SyncAPI:Invoke('SyncMesh', Record.Before);
+			coroutine.wrap(Core.SyncAPI.Invoke)(Core.SyncAPI, 'SyncMesh', Record.Before, Record.Scaling);
+			
+			Core.SyncAPI:Invoke('SyncResize', Record.PreviousPartSizes);
 
 		end;
 
@@ -814,7 +918,7 @@ function TrackChange()
 			Selection.Replace(Record.Selection)
 
 			-- Send the change request
-			Core.SyncAPI:Invoke('SyncMesh', Record.After);
+			Core.SyncAPI:Invoke('SyncMesh', Record.After, Record.Scaling);
 
 		end;
 
@@ -831,7 +935,7 @@ function RegisterChange()
 	end;
 
 	-- Send the change to the server
-	Core.SyncAPI:Invoke('SyncMesh', HistoryRecord.After);
+	Core.SyncAPI:Invoke('SyncMesh', HistoryRecord.After, HistoryRecord.Scaling);
 
 	-- Register the record and clear the staging
 	Core.History.Add(HistoryRecord);
