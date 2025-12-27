@@ -1,4 +1,5 @@
 local Core = require(script.Parent);
+local InstancePool = require(script.Parent.Parent.Libraries.InstancePool)
 local Support = Core.Support;
 
 -- Initialize module
@@ -8,10 +9,17 @@ local BoundingBoxModule = {};
 local StaticParts = {};
 local StaticPartsIndex = {};
 local StaticPartMonitors = {};
+local StaticParts = {};
+local StaticPartsIndex = {};
+local StaticPartMonitors = {};
 local RecalculateStaticExtents = true;
 local AggregatingStaticParts = false;
 local StaticPartAggregators = {};
 local PotentialPartMonitors = {};
+
+local HighlightPool = InstancePool.new(20, function ()
+	return Core.Make('SelectionBox')(Core.Options.BoundingBoxHighlightMake(Core))
+end)
 
 function BoundingBoxModule.StartBoundingBox(HandleAttachmentCallback)
 	-- Creates and starts a selection bounding box
@@ -34,6 +42,12 @@ function BoundingBoxModule.StartBoundingBox(HandleAttachmentCallback)
 		Parent = Core.UI;
 	};
 
+	HighlightPool:ReleaseAll()
+
+	local Highlight = HighlightPool:Get()
+
+	Highlight.Adornee = BoundingBox
+
 	-- Make the mouse ignore it
 	Core.Mouse.TargetFilter = BoundingBox;
 
@@ -53,6 +67,7 @@ function BoundingBoxModule.StartBoundingBox(HandleAttachmentCallback)
 		BoundingBoxHandleCallback(BoundingBox);
 	end;
 
+	return BoundingBox
 end;
 
 function BoundingBoxModule.GetBoundingBox()
@@ -85,31 +100,36 @@ function BoundingBoxModule.UpdateBoundingBox()
 	end;
 
 	-- If the bounding box is inactive, and should now be active, update it
-	if InactiveBoundingBox and #Core.Selection.Parts > 0 then
+	if InactiveBoundingBox and (#Core.Selection.Parts > 0 or #Core.Selection.Attachments > 0) then
 		BoundingBox = InactiveBoundingBox;
 		InactiveBoundingBox = nil;
 		BoundingBoxHandleCallback(BoundingBox);
 
-	-- If the bounding box is active, and there are no parts, disable it
-	elseif BoundingBox and #Core.Selection.Parts == 0 then
+		local Highlight = HighlightPool:Get()
+
+		Highlight.Adornee = BoundingBox
+
+		-- If the bounding box is active, and there are no parts, disable it
+	elseif BoundingBox and (#Core.Selection.Parts == 0 and #Core.Selection.Attachments == 0) then
 		InactiveBoundingBox = BoundingBox;
 		BoundingBox = nil;
 		BoundingBoxHandleCallback(BoundingBox);
+		HighlightPool:ReleaseAll()
 		return;
 
-	-- Don't try to update the bounding box if there are no parts
-	elseif #Core.Selection.Parts == 0 then
+		-- Don't try to update the bounding box if there are no parts
+	elseif #Core.Selection.Parts == 0 and #Core.Selection.Attachments == 0 then
 		return;
 	end;
 
 	-- Recalculate the extents of static items as needed only
 	if RecalculateStaticExtents then
-		BoundingBoxModule.StaticExtents = BoundingBoxModule.CalculateExtents(StaticParts, nil, true);
+		BoundingBoxModule.StaticExtents = BoundingBoxModule.CalculateExtents(StaticParts, Core.Selection.Attachments, nil, true);
 		RecalculateStaticExtents = false;
 	end;
 
 	-- Update the bounding box
-	local BoundingBoxSize, BoundingBoxCFrame = BoundingBoxModule.CalculateExtents(Core.Selection.Parts, BoundingBoxModule.StaticExtents);
+	local BoundingBoxSize, BoundingBoxCFrame = BoundingBoxModule.CalculateExtents(Core.Selection.Parts, Core.Selection.Attachments, BoundingBoxModule.StaticExtents);
 	BoundingBox.Size = BoundingBoxSize;
 	BoundingBox.CFrame = BoundingBoxCFrame;
 
@@ -135,6 +155,9 @@ function BoundingBoxModule.ClearBoundingBox()
 	-- Delete the bounding box
 	if BoundingBox then
 		BoundingBox:Destroy();
+
+		HighlightPool:ReleaseAll()
+
 		BoundingBox = nil;
 	elseif InactiveBoundingBox then
 		InactiveBoundingBox:Destroy();
@@ -154,7 +177,7 @@ function AddStaticParts(Parts)
 	-- Adds the static parts to the list for state tracking
 
 	-- Add each given part
-	for _, Part in pairs(Parts) do
+	for _, Part in Parts do
 
 		-- Ensure part isn't already indexed, and verify it is static
 		if not StaticPartsIndex[Part] and (IsPhysicsStatic() or Part.Anchored) then
@@ -192,7 +215,7 @@ function AddStaticPartMonitor(Part)
 		if Property == 'CFrame' or Property == 'Size' then
 			RecalculateStaticExtents = true;
 
-		-- Remove part from static index if it becomes mobile
+			-- Remove part from static index if it becomes mobile
 		elseif Property == 'Anchored' and not IsPhysicsStatic() and not Part.Anchored then
 			RemoveStaticParts { Part };
 		end;
@@ -372,21 +395,86 @@ local math_min = math.min;
 local math_max = math.max;
 local unpack = unpack;
 
-function BoundingBoxModule.CalculateExtents(Items, StaticExtents, ExtentsOnly)
+function BoundingBoxModule.CalculateExtents(Items, Attachments, StaticExtents, ExtentsOnly)
 	-- Returns the size and position of a box covering all items in `Items`
 
 	-- Ensure there are items
-	if #Items == 0 then
+	if #Items == 0 and #Attachments == 0 then
 		return;
 	end;
 
 	-- Get initial extents data for comparison
-	local ComparisonBaseMin = StaticExtents and StaticExtents.Min or Items[1].Position;
-	local ComparisonBaseMax = StaticExtents and StaticExtents.Max or Items[1].Position;
+	local ComparisonBaseMin = StaticExtents and StaticExtents.Min or Items[1] and Items[1].Position or Attachments[1] and Attachments[1].WorldCFrame;
+	local ComparisonBaseMax = StaticExtents and StaticExtents.Max or Items[1] and Items[1].Position or Attachments[1] and Attachments[1].WorldCFrame;
 	local MinX, MinY, MinZ = ComparisonBaseMin.X, ComparisonBaseMin.Y, ComparisonBaseMin.Z;
 	local MaxX, MaxY, MaxZ = ComparisonBaseMax.X, ComparisonBaseMax.Y, ComparisonBaseMax.Z;
 
 	-- Go through each part in `Items`
+	if Attachments then
+		for _, Attachment in pairs(Attachments) do
+
+			-- Get shortcuts to part data
+			local PartCFrame = Attachment.WorldCFrame;
+			local PartSize = Vector3.new(0.2, 0.2, 0.2) / 2;
+
+			print(PartSize)
+
+			local SizeX, SizeY, SizeZ = PartSize.X, PartSize.Y, PartSize.Z;
+
+			local Corner;
+			local XPoints, YPoints, ZPoints = {}, {}, {};
+
+			Corner = PartCFrame * CFrame_new(SizeX, SizeY, SizeZ);
+			table_insert(XPoints, Corner.x);
+			table_insert(YPoints, Corner.y);
+			table_insert(ZPoints, Corner.z);
+
+			Corner = PartCFrame * CFrame_new(-SizeX, SizeY, SizeZ);
+			table_insert(XPoints, Corner.x);
+			table_insert(YPoints, Corner.y);
+			table_insert(ZPoints, Corner.z);
+
+			Corner = PartCFrame * CFrame_new(SizeX, -SizeY, SizeZ);
+			table_insert(XPoints, Corner.x);
+			table_insert(YPoints, Corner.y);
+			table_insert(ZPoints, Corner.z);
+
+			Corner = PartCFrame * CFrame_new(SizeX, SizeY, -SizeZ);
+			table_insert(XPoints, Corner.x);
+			table_insert(YPoints, Corner.y);
+			table_insert(ZPoints, Corner.z);
+
+			Corner = PartCFrame * CFrame_new(-SizeX, SizeY, -SizeZ);
+			table_insert(XPoints, Corner.x);
+			table_insert(YPoints, Corner.y);
+			table_insert(ZPoints, Corner.z);
+
+			Corner = PartCFrame * CFrame_new(-SizeX, -SizeY, SizeZ);
+			table_insert(XPoints, Corner.x);
+			table_insert(YPoints, Corner.y);
+			table_insert(ZPoints, Corner.z);
+
+			Corner = PartCFrame * CFrame_new(SizeX, -SizeY, -SizeZ);
+			table_insert(XPoints, Corner.x);
+			table_insert(YPoints, Corner.y);
+			table_insert(ZPoints, Corner.z);
+
+			Corner = PartCFrame * CFrame_new(-SizeX, -SizeY, -SizeZ);
+			table_insert(XPoints, Corner.x);
+			table_insert(YPoints, Corner.y);
+			table_insert(ZPoints, Corner.z);
+
+			-- Reduce gathered points to min/max extents
+			MinX = math_min(MinX, unpack(XPoints));
+			MinY = math_min(MinY, unpack(YPoints));
+			MinZ = math_min(MinZ, unpack(ZPoints));
+			MaxX = math_max(MaxX, unpack(XPoints));
+			MaxY = math_max(MaxY, unpack(YPoints));
+			MaxZ = math_max(MaxZ, unpack(ZPoints));
+
+		end;
+	end
+
 	for _, Part in pairs(Items) do
 
 		-- Avoid re-calculating for static parts
