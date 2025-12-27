@@ -7,14 +7,13 @@ local Libraries = Tool:WaitForChild('Libraries')
 -- Libraries
 local ListenForManualWindowTrigger = require(Tool.Core:WaitForChild('ListenForManualWindowTrigger'))
 local Roact = require(Vendor:WaitForChild('Roact'))
-local Dropdown = require(UI:WaitForChild('Dropdown'))
 local Signal = require(Libraries:WaitForChild('Signal'))
+local BoundingBox = require(Tool.Core.BoundingBox)
 
 -- Import relevant references
 Selection = Core.Selection;
 Support = Core.Support;
 Security = Core.Security;
-Support.ImportServices();
 
 -- Initialize the tool
 local SurfaceTool = {
@@ -32,8 +31,18 @@ local SurfaceTool = {
 	OnSurfaceTypeChanged = Signal.new();
 }
 
-SurfaceTool.ManualText = [[<font face="GothamBlack" size="16">Surface Tool  🛠</font>
-Lets you change the surfaces of parts.<font size="6"><br /></font>
+SurfaceTool.ManualText = [[<font weight="900" size="24"><u><i>Surface Tool  🛠</i></u></font>
+Lets you change the surfaces of parts. The appearance only applies to non-mesh parts with material set to plastic.<font size="6"><br /></font>
+
+<font size="12" color="rgb(150, 150, 150)"><b>Surfaces & Properties</b></font>
+
+<font color="rgb(150, 150, 150)">•</font> <b>Smooth</b> — the surface without any change applied to it.
+<font color="rgb(150, 150, 150)">•</font> <b>Studs</b> — squares across the surface.
+<font color="rgb(150, 150, 150)">•</font> <b>Inlet</b> — square holes across the surface.
+<font color="rgb(150, 150, 150)">•</font> <b>Universal</b> — hybrid of studs and inlet.
+<font color="rgb(150, 150, 150)">•</font> <b>Weld/Glue</b> — X-like patterns across the surface.
+<font color="rgb(150, 150, 150)">•</font> <b>Hinges</b> — Yellow cylinder that sticks to parts as a rotation center. It shouldn't be used in new works in favor of hinge constraints with the constraint tool.
+<font color="rgb(150, 150, 150)">•</font> <b>Motors</b> — Same as the hinge but with a grey cylinder around.
 
 <b>TIP: </b>Click a part's surface to select it quickly.]]
 
@@ -46,6 +55,17 @@ function SurfaceTool.Equip()
 	-- Start up our interface
 	ShowUI();
 	EnableSurfaceSelection();
+	if Selection.DisableHighlights then
+		BoundingBox.StartBoundingBox(function () end)
+	end
+
+	Connections.BoundingBox = Selection.Changed:Connect(function()
+		if Selection.DisableHighlights and not BoundingBox.GetBoundingBox() then
+			BoundingBox.StartBoundingBox(function () end)
+		elseif not Selection.DisableHighlights and BoundingBox.GetBoundingBox() then
+			BoundingBox.ClearBoundingBox()
+		end
+	end)
 
 	-- Set our current surface mode
 	SetSurface(SurfaceTool.Surface);
@@ -58,6 +78,7 @@ function SurfaceTool.Unequip()
 	-- Clear unnecessary resources
 	HideUI();
 	ClearConnections();
+	BoundingBox.ClearBoundingBox();
 
 end;
 
@@ -72,12 +93,16 @@ function ClearConnections()
 end;
 
 function ShowUI()
+	UI = Core.UIFolder
+	
+	local Dropdown = require(UI:WaitForChild('Dropdown'))
+	
 	-- Creates and reveals the UI
 
 	local self = SurfaceTool
 
 	-- Reveal UI if already created
-	if SurfaceTool.UI then
+	if SurfaceTool.UI and SurfaceTool.UI.Parent ~= nil then
 
 		-- Reveal the UI
 		SurfaceTool.UI.Visible = true;
@@ -89,9 +114,13 @@ function ShowUI()
 		return;
 
 	end;
+	
+	if SurfaceTool.UI then
+		SurfaceTool.UI:Destroy()
+	end
 
 	-- Create the UI
-	SurfaceTool.UI = Core.Tool.Interfaces.BTSurfaceToolGUI:Clone();
+	SurfaceTool.UI = Core.Interfaces.BTSurfaceToolGUI:Clone();
 	SurfaceTool.UI.Parent = Core.UI;
 	SurfaceTool.UI.Visible = true;
 
