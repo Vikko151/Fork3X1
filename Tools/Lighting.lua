@@ -1,21 +1,19 @@
 Tool = script.Parent.Parent;
 Core = require(Tool.Core);
+Sounds = Tool:WaitForChild("Sounds");
 local Vendor = Tool:WaitForChild('Vendor')
-local UI = Tool:WaitForChild('UI')
-local Libraries = Tool:WaitForChild('Libraries')
+local Libraries = Core.Libraries
+local BoundingBox = require(Tool.Core.BoundingBox)
 
 -- Libraries
 local ListenForManualWindowTrigger = require(Tool.Core:WaitForChild('ListenForManualWindowTrigger'))
 local Roact = require(Vendor:WaitForChild('Roact'))
-local ColorPicker = require(UI:WaitForChild('ColorPicker'))
-local Dropdown = require(UI:WaitForChild('Dropdown'))
 local Signal = require(Libraries:WaitForChild('Signal'))
 
 -- Import relevant references
 Selection = Core.Selection;
 Support = Core.Support;
 Security = Core.Security;
-Support.ImportServices();
 
 -- Initialize the tool
 local LightingTool = {
@@ -26,8 +24,14 @@ local LightingTool = {
 	OnSideChanged = Signal.new();
 }
 
-LightingTool.ManualText = [[<font face="GothamBlack" size="16">Lighting Tool  🛠</font>
+if table.find(Core.Options.ToolsBlacklist, LightingTool.Name) then
+	return LightingTool
+end
+
+LightingTool.ManualText = [[<font weight="900" size="24"><u><i>Lighting Tool  🛠</i></u></font>
 Lets you add point lights, surface lights, and spotlights to parts.<font size="6"><br /></font>
+
+<b>NOTE:</b> While fancy, avoid using shadows with lights, as they can be performance-heavy.
 
 <b>TIP:</b> Click on the surface of any part to change a light's side quickly.]]
 
@@ -40,6 +44,17 @@ function LightingTool.Equip()
 	-- Start up our interface
 	ShowUI();
 	EnableSurfaceClickSelection();
+	if Selection.DisableHighlights then
+		BoundingBox.StartBoundingBox(function () end)
+	end
+
+	Connections.BoundingBox = Selection.Changed:Connect(function()
+		if Selection.DisableHighlights and not BoundingBox.GetBoundingBox() then
+			BoundingBox.StartBoundingBox(function () end)
+		elseif not Selection.DisableHighlights and BoundingBox.GetBoundingBox() then
+			BoundingBox.ClearBoundingBox()
+		end
+	end)
 
 end;
 
@@ -49,6 +64,7 @@ function LightingTool.Unequip()
 	-- Clear unnecessary resources
 	HideUI();
 	ClearConnections();
+	BoundingBox.ClearBoundingBox();
 
 end;
 
@@ -66,7 +82,7 @@ function ShowUI()
 	-- Creates and reveals the UI
 
 	-- Reveal UI if already created
-	if LightingTool.UI then
+	if LightingTool.UI and LightingTool.UI.Parent ~= nil then
 
 		-- Reveal the UI
 		LightingTool.UI.Visible = true;
@@ -79,8 +95,12 @@ function ShowUI()
 
 	end;
 
+	if LightingTool.UI then
+		LightingTool.UI:Destroy()
+	end
+
 	-- Create the UI
-	LightingTool.UI = Core.Tool.Interfaces.BTLightingToolGUI:Clone();
+	LightingTool.UI = Core.Interfaces.BTLightingToolGUI:Clone();
 	LightingTool.UI.Parent = Core.UI;
 	LightingTool.UI.Visible = true;
 
@@ -122,6 +142,11 @@ function EnableLightSettingsUI(LightSettingsUI)
 	-- Get the type of light this settings UI is for
 	local LightType = LightSettingsUI.Name;
 
+	local UI = Core.UIFolder
+	local ColorPicker = require(UI:WaitForChild('ColorPicker'))
+
+	local Dropdown = require(UI:WaitForChild('Dropdown'))
+
 	-- Option input references
 	local Options = LightSettingsUI.Options;
 	local RangeInput = Options.RangeOption.Input.TextBox;
@@ -130,8 +155,8 @@ function EnableLightSettingsUI(LightSettingsUI)
 	local ShadowsCheckbox = Options.ShadowsOption.Checkbox;
 
 	-- Add/remove/show button references
-	local AddButton = LightSettingsUI.AddButton;
-	local RemoveButton = LightSettingsUI.RemoveButton;
+	local AddButton = LightSettingsUI.Buttons.AddButton;
+	local RemoveButton = LightSettingsUI.Buttons.RemoveButton;
 	local ShowButton = LightSettingsUI.ArrowButton;
 
 	-- Enable range input
@@ -169,16 +194,27 @@ function EnableLightSettingsUI(LightSettingsUI)
 	-- Enable shadows input
 	ShadowsCheckbox.MouseButton1Click:Connect(function ()
 		ToggleShadows(LightType);
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Press"))
 	end);
 
 	-- Enable light addition button
 	AddButton.MouseButton1Click:Connect(function ()
 		AddLights(LightType);
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Add"))
+	end);
+
+	AddButton.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
 	end);
 
 	-- Enable light removal button
 	RemoveButton.MouseButton1Click:Connect(function ()
 		RemoveLights(LightType);
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Remove"))
+	end);
+
+	RemoveButton.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
 	end);
 
 	-- Enable light options UI show button
@@ -254,6 +290,10 @@ function GetLights(LightType)
 		table.insert(Lights, Support.GetChildOfClass(Part, LightType));
 	end;
 
+	for _, Attachment in pairs(Selection.Attachments) do
+		table.insert(Lights, Support.GetChildOfClass(Attachment, LightType));
+	end;
+
 	-- Return the lights
 	return Lights;
 
@@ -267,7 +307,7 @@ function OpenLightOptions(LightType)
 
 	-- Get the UI
 	local UI = LightingTool.UI[LightType];
-	local UITemplate = Core.Tool.Interfaces.BTLightingToolGUI[LightType];
+	local UITemplate = Core.Interfaces.BTLightingToolGUI[LightType];
 
 	-- Close up all light option UIs
 	CloseLightOptions(LightType);
@@ -295,7 +335,7 @@ function OpenLightOptions(LightType)
 
 	-- Expand the main UI to accommodate the expanded options UI
 	LightingTool.UI:TweenSize(
-		Core.Tool.Interfaces.BTLightingToolGUI.Size + HeightExpansion,
+		Core.Interfaces.BTLightingToolGUI.Size + HeightExpansion,
 		Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true
 	);
 
@@ -333,7 +373,7 @@ function CloseLightOptions(Exception)
 
 		-- Get the UI for each light type
 		local UI = LightingTool.UI[LightType];
-		local UITemplate = Core.Tool.Interfaces.BTLightingToolGUI[LightType];
+		local UITemplate = Core.Interfaces.BTLightingToolGUI[LightType];
 
 		-- Remember the initial size for each options UI
 		local InitialSize = UITemplate.Options.Size;
@@ -377,7 +417,7 @@ function CloseLightOptions(Exception)
 	-- Contract the main UI if no option UIs are being opened
 	if not Exception then
 		LightingTool.UI:TweenSize(
-			Core.Tool.Interfaces.BTLightingToolGUI.Size,
+			Core.Interfaces.BTLightingToolGUI.Size,
 			Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.5, true
 		);
 	end;
@@ -406,8 +446,8 @@ function UpdateUI()
 		local ShadowsCheckbox = Options.ShadowsOption.Checkbox;
 
 		-- Add/remove button references
-		local AddButton = LightSettingsUI.AddButton;
-		local RemoveButton = LightSettingsUI.RemoveButton;
+		local AddButton = LightSettingsUI:FindFirstChild("AddButton") or LightSettingsUI.Buttons.AddButton;
+		local RemoveButton = LightSettingsUI:FindFirstChild("RemoveButton") or LightSettingsUI.Buttons.RemoveButton;
 
 		-- Hide option UIs for light types not present in the selection
 		if #Lights == 0 and not LightSettingsUI.ClipsDescendants then
@@ -426,8 +466,8 @@ function UpdateUI()
 			AddButton.Position = UDim2.new(1, -AddButton.AbsoluteSize.X - 5, 0, 3);
 			RemoveButton.Visible = false;
 
-		-- If only some selected parts have lights
-		elseif #Lights < #Selection.Parts then
+			-- If only some selected parts have lights
+		elseif #Lights < #Selection.Parts + #Selection.Attachments then
 
 			-- Show both add and remove buttons
 			AddButton.Visible = true;
@@ -435,8 +475,8 @@ function UpdateUI()
 			RemoveButton.Visible = true;
 			RemoveButton.Position = UDim2.new(1, -AddButton.AbsoluteSize.X - 5 - RemoveButton.AbsoluteSize.X - 2, 0, 3);
 
-		-- If all selected parts have lights
-		elseif #Lights == #Selection.Parts then
+			-- If all selected parts have lights
+		elseif #Lights == #Selection.Parts + #Selection.Attachments then
 
 			-- Show remove button
 			RemoveButton.Visible = true;
@@ -485,12 +525,35 @@ function UpdateUI()
 
 		-- Update the special shadows input
 		local ShadowsEnabled = Support.IdentifyCommonProperty(Lights, 'Shadows');
+		local IsLegacyCheckmark = not ShadowsCheckbox:FindFirstChild("Multiple")
+
 		if ShadowsEnabled == true then
-			ShadowsCheckbox.Image = Core.Assets.CheckedCheckbox;
+			-- Clear every UI tags
+
+			if not IsLegacyCheckmark then
+				ShadowsCheckbox:AddTag("STATE_True")
+				ShadowsCheckbox:RemoveTag("STATE_Multiple")
+			else
+				ShadowsCheckbox.Image = Core.Assets.CheckedCheckbox;
+			end
+			--			ShadowsCheckbox.Image = Core.Assets.CheckedCheckbox;
 		elseif ShadowsEnabled == false then
-			ShadowsCheckbox.Image = Core.Assets.UncheckedCheckbox;
+			-- Clear every UI tags
+			if not IsLegacyCheckmark then
+				ShadowsCheckbox:RemoveTag("STATE_True")
+				ShadowsCheckbox:RemoveTag("STATE_Multiple")
+			else
+				ShadowsCheckbox.Image = Core.Assets.UncheckedCheckbox;
+			end
+			--			
 		elseif ShadowsEnabled == nil then
-			ShadowsCheckbox.Image = Core.Assets.SemicheckedCheckbox;
+			-- Clear every UI tags
+			if not IsLegacyCheckmark then
+				ShadowsCheckbox:RemoveTag("STATE_True")
+				ShadowsCheckbox:AddTag("STATE_Multiple")
+			else
+				ShadowsCheckbox.Image = Core.Assets.SemicheckedCheckbox;
+			end
 		end;
 
 	end;
@@ -528,6 +591,18 @@ function AddLights(LightType)
 
 			-- Queue a light to be created for this part
 			table.insert(Changes, { Part = Part, LightType = LightType });
+
+		end;
+
+	end;
+
+	for _, Attachment in pairs(Selection.Attachments) do
+
+		-- Make sure this part doesn't already have a light
+		if not Support.GetChildOfClass(Attachment, LightType) then
+
+			-- Queue a light to be created for this part
+			table.insert(Changes, { Part = Attachment, LightType = LightType });
 
 		end;
 
@@ -761,11 +836,11 @@ function PreviewColor(LightType, Color)
 		-- Skip rest of function
 		return
 
-	-- Ensure valid color is given
+			-- Ensure valid color is given
 	elseif not Color then
 		return
 
-	-- Save initial state if first time previewing
+			-- Save initial state if first time previewing
 	elseif not PreviewInitialState then
 		PreviewInitialState = {}
 		for _, Light in pairs(GetLights(LightType)) do
