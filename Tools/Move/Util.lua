@@ -1,25 +1,39 @@
-local function TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates)
-	-- Moves the given parts in `InitialStates` to BasePart's current position, with their original offset from it
+local Tool = script.Parent.Parent.Parent
+local Core = require(Tool.Core)
+
+local function TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates, InitialAttachmentsStates)
+	-- Moves the given parts in `InitialStates` to BasePart's current position, with their original offset from i
+	-- @Vikko151 - This function has been made to now work with BulkMoveTo(), hence improving performance
 
 	-- Get focused part's position for offsetting
-	local RelativeTo = InitialPartStates[BasePart].CFrame:inverse()
+	local RelativeTo = InitialPartStates[BasePart].CFrame:Inverse()
+	
+	local Parts = {}
+	local CFrames = {}
 
 	-- Calculate offset and move each part
 	for Part, InitialState in pairs(InitialPartStates) do
 
+		table.insert(Parts, Part)
 		-- Calculate how far apart we should be from the focused part
+		
 		local Offset = RelativeTo * InitialState.CFrame
-
-		-- Move relative to the focused part by this part's offset from it
-		Part.CFrame = BasePart.CFrame * Offset
+		
+		table.insert(CFrames, BasePart.CFrame * Offset)
 
 	end
 
-	-- Calculate offset and move each model
 	for Model, InitialState in pairs(InitialModelStates) do
 		local Offset = RelativeTo * InitialState.Pivot
 		Model.WorldPivot = BasePart.CFrame * Offset
 	end
+	
+	for Attachment, InitialState in pairs(InitialAttachmentsStates) do
+		local Offset = RelativeTo * InitialState.WorldCFrame
+		Attachment.WorldCFrame = Attachment.WorldCFrame * Offset
+	end
+	
+	game.Workspace:BulkMoveTo(Parts, CFrames)
 end
 
 local function GetIncrementMultiple(Number, Increment)
