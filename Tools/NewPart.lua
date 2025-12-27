@@ -1,23 +1,24 @@
 Tool = script.Parent.Parent;
 Core = require(Tool.Core);
 local Vendor = Tool:WaitForChild('Vendor')
-local UI = Tool:WaitForChild('UI')
-local Libraries = Tool:WaitForChild('Libraries')
+local UI = Core.UIFolder
+local Libraries = Core.Libraries
+
+local Options = Tool:WaitForChild("Options", 1) and require(Tool.Options)
 
 -- Services
+local CollectionService = game:GetService('CollectionService')
 local ContextActionService = game:GetService 'ContextActionService'
 
 -- Libraries
 local ListenForManualWindowTrigger = require(Tool.Core:WaitForChild('ListenForManualWindowTrigger'))
 local Roact = require(Vendor:WaitForChild('Roact'))
-local Dropdown = require(UI:WaitForChild('Dropdown'))
 local Signal = require(Libraries:WaitForChild('Signal'))
 
 -- Import relevant references
 Selection = Core.Selection;
 Support = Core.Support;
 Security = Core.Security;
-Support.ImportServices();
 
 -- Initialize the tool
 local NewPartTool = {
@@ -31,7 +32,11 @@ local NewPartTool = {
 	OnTypeChanged = Signal.new();
 }
 
-NewPartTool.ManualText = [[<font face="GothamBlack" size="16">New Part Tool  🛠</font>
+if table.find(Core.Options.ToolsBlacklist, NewPartTool.Name) then
+	return NewPartTool
+end
+
+NewPartTool.ManualText = [[<font weight="900" size="24"><u><i>New Part Tool  🛠</i></u></font>
 Lets you create new parts.<font size="6"><br /></font>
 
 <b>TIP:</b> Click and drag where you want your part to be.]]
@@ -72,10 +77,14 @@ function ClearConnections()
 end;
 
 function NewPartTool:ShowUI()
+	UI = Core.UIFolder
+	
+	local Dropdown = require(UI:WaitForChild('Dropdown'))
+	
 	-- Creates and reveals the UI
 
 	-- Reveal UI if already created
-	if self.UI then
+	if self.UI and self.UI.Parent ~= nil then
 
 		-- Reveal the UI
 		self.UI.Visible = true;
@@ -84,9 +93,13 @@ function NewPartTool:ShowUI()
 		return;
 
 	end;
+	
+	if self.UI then
+		self.UI:Destroy()
+	end
 
 	-- Create the UI
-	self.UI = Core.Tool.Interfaces.BTNewPartToolGUI:Clone()
+	self.UI = Core.Interfaces.BTNewPartToolGUI:Clone()
 	self.UI.Parent = Core.UI
 	self.UI.Visible = true
 
@@ -101,7 +114,23 @@ function NewPartTool:ShowUI()
 		'Seat';
 		'Vehicle Seat';
 		'Spawn';
+		'Tool';
 	}
+	
+	local CustomPartTypes = type(Options.CustomPartTypes) == "function" and Options.CustomPartTypes() or Options.CustomPartTypes
+	
+	for Type, _ in CustomPartTypes do
+		table.insert(Types, Type)
+	end
+	
+	for _, Type in Options.InstanceBlacklist do
+		local Index = table.find(Types, Type)
+		if Index then
+			table.remove(Types, Index)
+		end
+	end
+	
+
 
 	-- Create type dropdown
 	local function BuildTypeDropdown()
@@ -179,7 +208,17 @@ end;
 function CreatePart(Type)
 
 	-- Send the creation request to the server
-	local Part = Core.SyncAPI:Invoke('CreatePart', Type, CFrame.new(Core.Mouse.Hit.p), Core.Targeting.Scope)
+	local Part, replicationTag = Core.SyncAPI:Invoke('CreatePart', Type, CFrame.new(Core.Mouse.Hit.p), Core.Targeting.Scope)
+
+	-- Use the replication tag to wait for the part if it's not ready
+	if (Part == nil) and replicationTag then
+		local existingMarker = CollectionService:GetTagged(replicationTag)[1]
+		if existingMarker then
+			Part = existingMarker.Parent
+		else
+			Part = CollectionService:GetInstanceAddedSignal(replicationTag):Wait().Parent
+		end
+	end
 
 	-- Make sure the part creation succeeds
 	if not Part then
@@ -214,15 +253,16 @@ function CreatePart(Type)
 	-- Select the part
 	Selection.Replace({ Part });
 
-	-- Switch to the move tool
-	local MoveTool = require(Core.Tool.Tools.Move);
-	Core.EquipTool(MoveTool);
-
-	-- Enable dragging to allow easy positioning of the created part
-	if DragNewParts then
-		MoveTool.FreeDragging:SetUpDragging(Part)
-	end;
-
+	-- Switch to the move tool if it's whitelisted
+	if not table.find(Core.Options.ToolsBlacklist, "Move Tool") then
+		local MoveTool = require(Core.Tools.Move);
+		Core.EquipTool(MoveTool);
+		-- Enable dragging to allow easy positioning of the created part
+		if DragNewParts then
+			MoveTool.FreeDragging:SetUpDragging(Part)
+		end;
+	end
+	
 end;
 
 -- Return the tool
