@@ -24,7 +24,8 @@ function FreeDragging.new(Tool)
 		Tool = Tool;
 
         -- Dragging state
-        IsDragging = false;
+		IsDragging = false;
+		IsHandleDragging = false;
         StartScreenPoint = nil;
         StartTarget = nil;
         CrossthroughCorrection = nil;
@@ -39,7 +40,7 @@ function FreeDragging.new(Tool)
         -- Surface alignment state
         TriggerAlignment = nil;
         SurfaceAlignment = nil;
-        LastSurfaceAlignment = nil;
+		LastSurfaceAlignment = nil;
     }
 
     setmetatable(self, FreeDragging)
@@ -93,12 +94,14 @@ function FreeDragging:EnableDragging()
 			if DragScreenDistance >= 2 then
 
 				-- Prepare for dragging
-				BoundingBox.ClearBoundingBox()
-				self:SetUpDragging(self.StartTarget, SnapTracking.Enabled and self.Tool.SnappedPoint or nil)
-
-				-- Stop watching for potential dragging
-				ContextActionService:UnbindAction 'BT: Watch for dragging'
-
+				local IsDragSetup = self:SetUpDragging(self.StartTarget, SnapTracking.Enabled and self.Tool.SnappedPoint or nil)
+				
+				if IsDragSetup then
+					BoundingBox.ClearBoundingBox()
+				
+					-- Stop watching for potential dragging
+					ContextActionService:UnbindAction 'BT: Watch for dragging'
+				end
 			end
 
 			-- Pass input if not a touch interaction
@@ -124,17 +127,24 @@ end
 
 function FreeDragging:SetUpDragging(BasePart, BasePoint)
 	-- Sets up and initiates dragging based on the given base part
-
+	
+	task.wait()
+	
+	if self.Tool.HandleDragging.IsHandleDragging or Core.Targeting.MobileRectangleSelect ~= 0 then
+		return
+	end
+	
 	-- Prevent selection while dragging
 	Core.Targeting.CancelSelecting()
 
 	-- Prepare parts, and start dragging
-	self.InitialPartStates, self.InitialModelStates = self.Tool:PrepareSelectionForDragging()
-	self:StartDragging(BasePart, self.InitialPartStates, self.InitialModelStates, BasePoint)
-
+	self.InitialPartStates, self.InitialModelStates, self.InitialAttachmentsStates = self.Tool:PrepareSelectionForDragging()
+	self:StartDragging(BasePart, self.InitialPartStates, self.InitialModelStates, self.InitialAttachmentsStates, BasePoint)
+	
+	return true
 end
 
-function FreeDragging:StartDragging(BasePart, InitialPartStates, InitialModelStates, BasePoint)
+function FreeDragging:StartDragging(BasePart, InitialPartStates, InitialModelStates, InitialAttachmentsStates, BasePoint)
 	-- Begins dragging the selection
 
 	-- Ensure dragging is not already ongoing
@@ -169,7 +179,7 @@ function FreeDragging:StartDragging(BasePart, InitialPartStates, InitialModelSta
 	local BasePartOffset = -BasePart.CFrame:pointToObjectSpace(Core.Mouse.Hit.p)
 
 	-- Improve base point alignment for the given increment
-	BasePartOffset = Vector3.new(
+	BasePartOffset = vector.create(
 		math.clamp(MoveUtil.GetIncrementMultiple(BasePartOffset.X, self.Tool.Increment), -BasePart.Size.X / 2, BasePart.Size.X / 2),
 		math.clamp(MoveUtil.GetIncrementMultiple(BasePartOffset.Y, self.Tool.Increment), -BasePart.Size.Y / 2, BasePart.Size.Y / 2),
 		math.clamp(MoveUtil.GetIncrementMultiple(BasePartOffset.Z, self.Tool.Increment), -BasePart.Size.Z / 2, BasePart.Size.Z / 2)
@@ -187,12 +197,12 @@ function FreeDragging:StartDragging(BasePart, InitialPartStates, InitialModelSta
 		-- Align the selection's base point to the snapped point
 		local Rotation = self.SurfaceAlignment or (InitialPartStates[BasePart].CFrame - InitialPartStates[BasePart].CFrame.p)
 		BasePart.CFrame = CFrame.new(SnappedPoint) * Rotation * CFrame.new(BasePartOffset)
-		MoveUtil.TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates)
+		MoveUtil.TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates, InitialAttachmentsStates)
 
 		-- Make sure we're not entering any unauthorized private areas
 		if Core.Mode == 'Tool' and Security.ArePartsViolatingAreas(Selection.Parts, Core.Player, false, AreaPermissions) then
 			BasePart.CFrame = InitialPartStates[BasePart].CFrame
-			MoveUtil.TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates)
+			MoveUtil.TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates, InitialAttachmentsStates)
 		end
 
 	end)
@@ -204,7 +214,7 @@ function FreeDragging:StartDragging(BasePart, InitialPartStates, InitialModelSta
 	self.TriggerAlignment = function ()
 
 		-- Trigger drag recalculation
-		self:DragToMouse(BasePart, BasePartOffset, InitialPartStates, InitialModelStates, AreaPermissions)
+		self:DragToMouse(BasePart, BasePartOffset, InitialPartStates, InitialModelStates, InitialAttachmentsStates, AreaPermissions)
 
 		-- Trigger snapping recalculation
 		if SnapTracking.Enabled then
@@ -215,7 +225,7 @@ function FreeDragging:StartDragging(BasePart, InitialPartStates, InitialModelSta
 
 	local function HandleDragChange(Action, State, Input)
 		if State.Name == 'Change' then
-			self:DragToMouse(BasePart, BasePartOffset, InitialPartStates, InitialModelStates, AreaPermissions)
+			self:DragToMouse(BasePart, BasePartOffset, InitialPartStates, InitialModelStates, InitialAttachmentsStates, AreaPermissions)
 		end
 		return Enum.ContextActionResult.Pass
 	end
@@ -228,7 +238,7 @@ function FreeDragging:StartDragging(BasePart, InitialPartStates, InitialModelSta
 
 end
 
-function FreeDragging:DragToMouse(BasePart, BasePartOffset, InitialPartStates, InitialModelStates, AreaPermissions)
+function FreeDragging:DragToMouse(BasePart, BasePartOffset, InitialPartStates, InitialModelStates, InitialAttachmentsStates, AreaPermissions)
 	-- Drags the selection by `BasePart`, judging area authorization from `AreaPermissions`
 
 	----------------------------------------------
@@ -312,7 +322,7 @@ function FreeDragging:DragToMouse(BasePart, BasePartOffset, InitialPartStates, I
 
 	-- Move the selection, retracted by the max. crossthrough amount
 	BasePart.CFrame = TargetCFrame - (self.TargetNormal * self.CrossthroughCorrection)
-	MoveUtil.TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates)
+	MoveUtil.TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates, InitialAttachmentsStates)
 
 	----------------------------------------
 	-- Check for relevant area authorization
@@ -321,7 +331,7 @@ function FreeDragging:DragToMouse(BasePart, BasePartOffset, InitialPartStates, I
 	-- Make sure we're not entering any unauthorized private areas
 	if Core.Mode == 'Tool' and Security.ArePartsViolatingAreas(Selection.Parts, Core.Player, false, AreaPermissions) then
 		BasePart.CFrame = InitialPartStates[BasePart].CFrame
-		MoveUtil.TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates)
+		MoveUtil.TranslatePartsRelativeToPart(BasePart, InitialPartStates, InitialModelStates, InitialAttachmentsStates)
 	end
 
 end
@@ -335,7 +345,7 @@ function FreeDragging:AlignSelectionToTarget()
 	end
 
 	-- Get target surface normal as arbitrarily oriented CFrame
-	local TargetNormalCF = CFrame.new(Vector3.new(), self.TargetNormal)
+	local TargetNormalCF = CFrame.new(vector.zero, self.TargetNormal)
 
 	-- Use detected surface normal directly if not targeting a part
 	if not self.Target then
@@ -379,7 +389,7 @@ function FreeDragging:GetAlignedTargetPoint(Target, TargetPoint, TargetNormal, I
 
 	-- By default, use the center of the universe for alignment on all axes
 	local ReferencePoint = CFrame.new()
-	local PlaneAxes = Vector3.new(1, 1, 1)
+	local PlaneAxes = vector.one
 
 	-----------------------------------------------------------------------------
 	-- Detect appropriate reference points and plane axes for recognized surfaces
@@ -406,32 +416,32 @@ function FreeDragging:GetAlignedTargetPoint(Target, TargetPoint, TargetNormal, I
 		-- Get the right alignment reference point on a part's front surface
 		if TargetNormal:isClose(Target.CFrame.lookVector, 0.000001) then
 			ReferencePoint = Target.CFrame * CFrame.new(Size.X, Size.Y, -Size.Z)
-			PlaneAxes = Vector3.new(1, 1, 0)
+			PlaneAxes = vector.create(1, 1, 0)
 
 		-- Get the right alignment reference point on a part's back surface
 		elseif TargetNormal:isClose(-Target.CFrame.lookVector, 0.000001) then
 			ReferencePoint = Target.CFrame * CFrame.new(-Size.X, Size.Y, Size.Z)
-			PlaneAxes = Vector3.new(1, 1, 0)
+			PlaneAxes = vector.create(1, 1, 0)
 
 		-- Get the right alignment reference point on a part's left surface
 		elseif TargetNormal:isClose(-Target.CFrame.rightVector, 0.000001) then
 			ReferencePoint = Target.CFrame * CFrame.new(-Size.X, Size.Y, -Size.Z)
-			PlaneAxes = Vector3.new(0, 1, 1)
+			PlaneAxes = vector.create(0, 1, 1)
 
 		-- Get the right alignment reference point on a part's right surface
 		elseif TargetNormal:isClose(Target.CFrame.rightVector, 0.000001) then
 			ReferencePoint = Target.CFrame * CFrame.new(Size.X, Size.Y, Size.Z)
-			PlaneAxes = Vector3.new(0, 1, 1)
+			PlaneAxes = vector.create(0, 1, 1)
 
 		-- Get the right alignment reference point on a part's upper surface
 		elseif TargetNormal:isClose(Target.CFrame.upVector, 0.000001) then
 			ReferencePoint = Target.CFrame * CFrame.new(Size.X, Size.Y, Size.Z)
-			PlaneAxes = Vector3.new(1, 0, 1)
+			PlaneAxes = vector.create(1, 0, 1)
 
 		-- Get the right alignment reference point on a part's bottom surface
 		elseif TargetNormal:isClose(-Target.CFrame.upVector, 0.000001) then
 			ReferencePoint = Target.CFrame * CFrame.new(Size.X, -Size.Y, -Size.Z)
-			PlaneAxes = Vector3.new(1, 0, 1)
+			PlaneAxes = vector.create(1, 0, 1)
 
 		-- Get the right alignment reference point on wedged part surfaces
 		elseif TargetNormal:isClose(WedgeDirection.lookVector, 0.000001) then
@@ -439,10 +449,10 @@ function FreeDragging:GetAlignedTargetPoint(Target, TargetPoint, TargetNormal, I
 			-- Get reference point oriented to wedge plane
 			ReferencePoint = WedgeDirection *
 				CFrame.fromAxisAngle(Vector3.FromAxis(Enum.Axis.X), -math.pi / 2) +
-				(Target.CFrame * Vector3.new(Size.X, Size.Y, Size.Z))
+				(Target.CFrame * vector.create(Size.X, Size.Y, Size.Z))
 
 			-- Set plane offset axes
-			PlaneAxes = Vector3.new(1, 0, 1)
+			PlaneAxes = vector.create(1, 0, 1)
 
 		-- Get the right alignment reference point on the Z-axis surface of a corner part
 		elseif TargetNormal:isClose(CornerDirectionZ.lookVector, 0.000001) then
@@ -450,10 +460,10 @@ function FreeDragging:GetAlignedTargetPoint(Target, TargetPoint, TargetNormal, I
 			-- Get reference point oriented to wedged plane
 			ReferencePoint = CornerDirectionZ *
 				CFrame.fromAxisAngle(Vector3.FromAxis(Enum.Axis.X), -math.pi / 2) +
-				(Target.CFrame * Vector3.new(-Size.X, Size.Y, -Size.Z))
+				(Target.CFrame * vector.create(-Size.X, Size.Y, -Size.Z))
 
 			-- Set plane offset axes
-			PlaneAxes = Vector3.new(1, 0, 1)
+			PlaneAxes = vector.create(1, 0, 1)
 
 		-- Get the right alignment reference point on the X-axis surface of a corner part
 		elseif TargetNormal:isClose(CornerDirectionX.lookVector, 0.000001) then
@@ -461,10 +471,10 @@ function FreeDragging:GetAlignedTargetPoint(Target, TargetPoint, TargetNormal, I
 			-- Get reference point oriented to wedged plane
 			ReferencePoint = CornerDirectionX *
 				CFrame.fromAxisAngle(Vector3.FromAxis(Enum.Axis.X), -math.pi / 2) +
-				(Target.CFrame * Vector3.new(Size.X, Size.Y, -Size.Z))
+				(Target.CFrame * vector.create(Size.X, Size.Y, -Size.Z))
 
 			-- Set plane offset axes
-			PlaneAxes = Vector3.new(1, 0, 1)
+			PlaneAxes = vector.create(1, 0, 1)
 
 		-- Return an unaligned point for unrecognized surfaces
 		else
@@ -481,7 +491,7 @@ function FreeDragging:GetAlignedTargetPoint(Target, TargetPoint, TargetNormal, I
 	local ReferencePointOffset = ReferencePoint:inverse() * CFrame.new(TargetPoint)
 
 	-- Align target point on increment grid from reference point along the plane axes
-	local AlignedTargetPoint = ReferencePoint * (Vector3.new(
+	local AlignedTargetPoint = ReferencePoint * (vector.create(
 		MoveUtil.GetIncrementMultiple(ReferencePointOffset.X, Increment),
 		MoveUtil.GetIncrementMultiple(ReferencePointOffset.Y, Increment),
 		MoveUtil.GetIncrementMultiple(ReferencePointOffset.Z, Increment)
@@ -528,7 +538,7 @@ end
 
 
 -- Cache common functions to avoid unnecessary table lookups
-local TableInsert, NewVector3 = table.insert, Vector3.new
+local TableInsert, NewVector3 = table.insert, vector.create
 
 function GetCornerOffsets(Origin, InitialStates)
 	-- Calculates and returns the offset of every corner in the initial state from the origin CFrame
