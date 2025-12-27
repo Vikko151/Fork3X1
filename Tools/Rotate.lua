@@ -2,6 +2,7 @@ Tool = script.Parent.Parent;
 Core = require(Tool.Core);
 SnapTracking = require(Tool.Core.Snapping);
 BoundingBox = require(Tool.Core.BoundingBox);
+Sounds = Tool:WaitForChild("Sounds");
 
 -- Services
 local ContextActionService = game:GetService 'ContextActionService'
@@ -9,7 +10,7 @@ local Workspace = game:GetService 'Workspace'
 local UserInputService = game:GetService('UserInputService')
 
 -- Libraries
-local Libraries = Tool:WaitForChild 'Libraries'
+local Libraries = Core.Libraries
 local Make = require(Libraries:WaitForChild 'Make')
 local ListenForManualWindowTrigger = require(Tool.Core:WaitForChild('ListenForManualWindowTrigger'))
 
@@ -17,19 +18,23 @@ local ListenForManualWindowTrigger = require(Tool.Core:WaitForChild('ListenForMa
 Selection = Core.Selection;
 Support = Core.Support;
 Security = Core.Security;
-Support.ImportServices();
 
 -- Initialize the tool
 local RotateTool = {
 	Name = 'Rotate Tool';
 	Color = BrickColor.new 'Bright green';
+	FocusWise = false;
 
 	-- Default options
 	Increment = 15;
 	Pivot = 'Center';
 }
 
-RotateTool.ManualText = [[<font face="GothamBlack" size="16">Rotate Tool  🛠</font>
+if table.find(Core.Options.ToolsBlacklist, RotateTool.Name) then
+	return RotateTool
+end
+
+RotateTool.ManualText = [[<font weight="900" size="24"><u><i>Rotate Tool  🛠</i></u></font>
 Allows you to rotate parts.<font size="12"><br /></font>
 <font size="12" color="rgb(150, 150, 150)"><b>Pivot</b></font>
 This option lets you choose what to rotate the parts around.<font size="6"><br /></font>
@@ -60,12 +65,12 @@ local Connections = {};
 function RotateTool.Equip()
 	-- Enables the tool's equipped functionality
 
-	-- Set our current pivot mode
-	SetPivot(RotateTool.Pivot);
-
 	-- Start up our interface
 	ShowUI();
 	BindShortcutKeys();
+	
+	-- Set our current pivot mode
+	SetPivot(RotateTool.Pivot);
 
 end;
 
@@ -108,7 +113,7 @@ function ShowUI()
 	-- Creates and reveals the UI
 
 	-- Reveal UI if already created
-	if RotateTool.UI then
+	if RotateTool.UI and RotateTool.UI.Parent ~= nil then
 
 		-- Reveal the UI
 		RotateTool.UI.Visible = true;
@@ -120,24 +125,49 @@ function ShowUI()
 		return;
 
 	end;
+	
+	if RotateTool.UI then
+		RotateTool.UI:Destroy()
+	end
 
 	-- Create the UI
-	RotateTool.UI = Core.Tool.Interfaces.BTRotateToolGUI:Clone();
+	RotateTool.UI = Core.Interfaces.BTRotateToolGUI:Clone();
 	RotateTool.UI.Parent = Core.UI;
 	RotateTool.UI.Visible = true;
 
 	-- Add functionality to the pivot option switch
 	local PivotSwitch = RotateTool.UI.PivotOption;
 	PivotSwitch.Center.Button.MouseButton1Down:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Press"))
 		SetPivot('Center');
 	end);
+	PivotSwitch.Center.Button.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end);
 	PivotSwitch.Local.Button.MouseButton1Down:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Press"))
 		SetPivot('Local');
 	end);
+	PivotSwitch.Local.Button.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end);
 	PivotSwitch.Last.Button.MouseButton1Down:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Press"))
 		SetPivot('Last');
 	end);
+	PivotSwitch.Last.Button.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end);
+	
+	local FocusToggle = RotateTool.UI.FocusOption.Check
 
+	FocusToggle.Activated:Connect(function()
+		RotateTool.FocusWise = not RotateTool.FocusWise
+		UpdateToggleInput(FocusToggle, RotateTool.FocusWise)
+	end)
+
+	UpdateToggleInput(FocusToggle, RotateTool.FocusWise)
+	
 	-- Add functionality to the increment input
 	local IncrementInput = RotateTool.UI.IncrementOption.Increment.TextBox;
 	IncrementInput.FocusLost:Connect(function (EnterPressed)
@@ -177,6 +207,32 @@ function ShowUI()
 
 end;
 
+function UpdateToggleInput(Toggle, Data)
+	-- Updates the data in the given buttons
+
+	-- Go through the inputs and data
+	if Data == true then
+		-- Clear every UI tags
+		Toggle:AddTag("STATE_True")
+		Toggle:RemoveTag("STATE_Multiple")
+
+		--			ShadowsCheckbox.Image = Core.Assets.CheckedCheckbox;
+	elseif Data == false then
+		-- Clear every UI tags
+		Toggle:RemoveTag("STATE_True")
+		Toggle:RemoveTag("STATE_Multiple")
+
+		--			ShadowsCheckbox.Image = Core.Assets.UncheckedCheckbox;
+	elseif Data == nil then
+		-- Clear every UI tags
+		Toggle:RemoveTag("STATE_True")
+		Toggle:AddTag("STATE_Multiple")
+
+		--			ShadowsCheckbox.Image = Core.Assets.SemicheckedCheckbox;
+	end;
+
+end;
+
 function HideUI()
 	-- Hides the tool UI
 
@@ -200,9 +256,12 @@ function UpdateUI()
 	if not RotateTool.UI then
 		return;
 	end;
-
+	
+	-- Display the focus wise option only when available
+	RotateTool.UI.FocusOption.Visible = RotateTool.Pivot == "Last" and true or false
+	
 	-- Only show and calculate selection info if it's not empty
-	if #Selection.Parts == 0 then
+	if #Selection.Parts == 0 and #Selection.Attachments == 0 then
 		RotateTool.UI.Info.Visible = false;
 		RotateTool.UI.Size = UDim2.new(0, 245, 0, 90);
 		return;
@@ -215,16 +274,42 @@ function UpdateUI()
 	-- Update the size information indicators
 	-----------------------------------------
 
-	-- Identify common angles across axes
-	local XVariations, YVariations, ZVariations = {}, {}, {};
-	for _, Part in pairs(Selection.Parts) do
-		table.insert(XVariations, Support.Round(Part.Orientation.X, 3));
-		table.insert(YVariations, Support.Round(Part.Orientation.Y, 3));
-		table.insert(ZVariations, Support.Round(Part.Orientation.Z, 3));
-	end;
-	local CommonX = Support.IdentifyCommonItem(XVariations);
-	local CommonY = Support.IdentifyCommonItem(YVariations);
-	local CommonZ = Support.IdentifyCommonItem(ZVariations);
+	local CommonX --= Support.IdentifyCommonItem(XVariations)
+	local CommonY --= Support.IdentifyCommonItem(YVariations)
+	local CommonZ --= Support.IdentifyCommonItem(ZVariations)
+
+	-- Identify common positions across axes
+	if RotateTool.FocusWise == false or RotateTool.Pivot ~= "Last" then
+		local XVariations, YVariations, ZVariations = {}, {}, {}
+
+		for _, Part in pairs(Selection.Parts) do
+			table.insert(XVariations, Support.Round(Part.Orientation.X, 3))
+			table.insert(YVariations, Support.Round(Part.Orientation.Y, 3))
+			table.insert(ZVariations, Support.Round(Part.Orientation.Z, 3))
+		end
+		for _, Attachment in pairs(Selection.Attachments) do
+			table.insert(XVariations, Support.Round(Attachment.WorldOrientation.X, 3))
+			table.insert(YVariations, Support.Round(Attachment.WorldOrientation.Y, 3))
+			table.insert(ZVariations, Support.Round(Attachment.WorldOrientation.Z, 3))
+		end
+
+		CommonX = Support.IdentifyCommonItem(XVariations)
+		CommonY = Support.IdentifyCommonItem(YVariations)
+		CommonZ = Support.IdentifyCommonItem(ZVariations)
+	else
+		-- Just output the focus/bounding box's position
+		local FocusedObject = Selection.Focus
+
+		if FocusedObject:IsA("BasePart") then
+			CommonX = Support.Round(FocusedObject.Orientation.X, 3)
+			CommonY = Support.Round(FocusedObject.Orientation.Y, 3)
+			CommonZ = Support.Round(FocusedObject.Orientation.Z, 3)
+		else
+			CommonX = Support.Round(FocusedObject.WorldOrientation.X, 3)
+			CommonY = Support.Round(FocusedObject.WorldOrientation.Y, 3)
+			CommonZ = Support.Round(FocusedObject.WorldOrientation.Z, 3)
+		end
+	end
 
 	-- Shortcuts to indicators
 	local XIndicator = RotateTool.UI.Info.RotationInfo.X.TextBox;
@@ -260,26 +345,42 @@ function SetPivot(PivotMode)
 
 	-- For center mode, use bounding box handles
 	if PivotMode == 'Center' then
-		BoundingBox.StartBoundingBox(AttachHandles);
+			BoundingBox.StartBoundingBox(function (BoundingBox)
+				AttachHandles(BoundingBox, nil)
+			end)
 
 	-- For local mode, use focused part handles
 	elseif PivotMode == 'Local' then
+		BoundingBox.StartBoundingBox(function () end)
+		
 		AttachHandles(Selection.Focus, true); 
 
 	-- For last mode, use focused part handles
 	elseif PivotMode == 'Last' then
+		BoundingBox.StartBoundingBox(function () end)
+		
 		AttachHandles(CustomPivotPoint and (RotateTool.Handles and RotateTool.Handles.Adornee) or Selection.Focus, true);
 	end;
 
 end;
 
-function AttachHandles(Part, Autofocus)
+function AttachHandles(Part, Autofocus, IsGlobal)
+	
+	if not UIUpdater or UIUpdater.Running ~= true then return end
 	-- Creates and attaches handles to `Part`, and optionally automatically attaches to the focused part
 
 	-- Enable autofocus if requested and not already on
 	if Autofocus and not Connections.AutofocusHandle then
 		Connections.AutofocusHandle = Selection.FocusChanged:Connect(function ()
-			AttachHandles(Selection.Focus, true);
+			
+			if RotateTool.Pivot == "Center" and #Selection.Attachments > 0 and Selection.Focus:IsA("Attachment") then
+				AttachHandles(Selection.Focus, true, true)
+			elseif RotateTool.Pivot == "Center" then
+				AttachHandles(BoundingBox.GetBoundingBox(), true, false)
+				return
+			end
+			
+			AttachHandles(Selection.Focus, true, false);
 		end);
 
 	-- Disable autofocus if not requested and on
@@ -293,7 +394,7 @@ function AttachHandles(Part, Autofocus)
 	-- Just attach and show the handles if they already exist
 	if RotateTool.Handles then
 		RotateTool.Handles:BlacklistObstacle(BoundingBox.GetBoundingBox())
-		RotateTool.Handles:SetAdornee(Part)
+		RotateTool.Handles:SetAdornee(Part, IsGlobal)
 		return
 	end
 
@@ -305,16 +406,16 @@ function AttachHandles(Part, Autofocus)
 		Core.Targeting.CancelSelecting();
 
 		-- Indicate rotating via handle
-		HandleRotating = true;
+		RotateTool.HandleRotating = true;
 
 		-- Freeze bounding box extents while rotating
 		if BoundingBox.GetBoundingBox() then
-			InitialExtentsSize, InitialExtentsCFrame = BoundingBox.CalculateExtents(Selection.Parts, BoundingBox.StaticExtents)
-			BoundingBox.PauseMonitoring();
+			InitialExtentsSize, InitialExtentsCFrame = BoundingBox.CalculateExtents(Selection.Parts, Selection.Attachments, BoundingBox.StaticExtents)
+--			BoundingBox.PauseMonitoring();
 		end;
 
 		-- Stop parts from moving, and capture the initial state of the parts
-		InitialPartStates, InitialModelStates = PrepareSelectionForRotating()
+		InitialPartStates, InitialModelStates, InitialAttachmentsStates = PrepareSelectionForRotating()
 
 		-- Track the change
 		TrackChange();
@@ -325,18 +426,22 @@ function AttachHandles(Part, Autofocus)
 		end;
 
 		-- Set the pivot point to the center of the selection if in Center mode
-		if RotateTool.Pivot == 'Center' then
+		if RotateTool.Pivot == 'Center' and #Selection.Parts > 0 and BoundingBox.GetBoundingBox() then
+			
 			PivotPoint = BoundingBox.GetBoundingBox().CFrame;
-
+			
+		elseif RotateTool.Pivot == 'Center' and #Selection.Attachments > 0 and Selection.Focus:IsA("Attachment") then
+			
+			PivotPoint = CFrame.new(Selection.Focus.WorldCFrame.Position);
+			
 		-- Set the pivot point to the center of the focused part if in Last mode
 		elseif RotateTool.Pivot == 'Last' and not CustomPivotPoint then
 			if Selection.Focus:IsA 'BasePart' then
 				PivotPoint = Selection.Focus.CFrame
 			elseif Selection.Focus:IsA 'Model' then
-				PivotPoint = Selection.Focus:GetModelCFrame()
-				pcall(function ()
-					PivotPoint = Selection.Focus:GetPivot()
-				end)
+				PivotPoint = Selection.Focus:GetPivot()
+			elseif Selection.Focus:IsA 'Attachment' then
+				PivotPoint = Selection.Focus.WorldCFrame
 			end
 		end;
 
@@ -346,7 +451,7 @@ function AttachHandles(Part, Autofocus)
 		-- Update parts when the handles are moved
 
 		-- Only rotate if handle is enabled
-		if not HandleRotating then
+		if not RotateTool.HandleRotating then
 			return;
 		end;
 
@@ -360,7 +465,7 @@ function AttachHandles(Part, Autofocus)
 		local DisplayedRotation = GetHandleDisplayDelta(Rotation);
 
 		-- Perform the rotation
-		RotateSelectionAroundPivot(RotateTool.Pivot, PivotPoint, Axis, Rotation, InitialPartStates, InitialModelStates)
+		RotateSelectionAroundPivot(RotateTool.Pivot, PivotPoint, Axis, Rotation, InitialPartStates, InitialModelStates, InitialAttachmentsStates)
 
 		-- Make sure we're not entering any unauthorized private areas
 		if Core.Mode == 'Tool' and Security.ArePartsViolatingAreas(Selection.Parts, Core.Player, false, AreaPermissions) then
@@ -369,6 +474,9 @@ function AttachHandles(Part, Autofocus)
 			end;
 			for Model, State in pairs(InitialModelStates) do
 				Model.WorldPivot = State.Pivot
+			end
+			for Attachment, State in pairs(InitialAttachmentsStates) do
+				Attachment.WorldCFrame = State.WorldCFrame
 			end
 
 			-- Reset displayed rotation delta
@@ -383,7 +491,7 @@ function AttachHandles(Part, Autofocus)
 	end
 
 	local function OnHandleDragEnd()
-		if not HandleRotating then
+		if not RotateTool.HandleRotating then
 			return
 		end
 
@@ -391,7 +499,7 @@ function AttachHandles(Part, Autofocus)
 		Core.Targeting.CancelSelecting();
 
 		-- Disable rotating
-		HandleRotating = false;
+		RotateTool.HandleRotating = false;
 
 		-- Clear this connection to prevent it from firing again
 		ClearConnection 'HandleRelease';
@@ -413,16 +521,16 @@ function AttachHandles(Part, Autofocus)
 		RegisterChange();
 
 		-- Resume normal bounding box updating
-		BoundingBox.RecalculateStaticExtents();
-		BoundingBox.ResumeMonitoring();
+--		BoundingBox.RecalculateStaticExtents();
+--		BoundingBox.ResumeMonitoring();
 
 	end
 
 	-- Create the handles
-	local ArcHandles = require(Libraries:WaitForChild 'ArcHandles')
+	local ArcHandles = require(Libraries:WaitForChild(Core.Options.IgnoreHandlesWithCamera and not game:GetService("UserInputService").TouchEnabled and 'ArcHandles' or 'OldArcHandles'))
 	RotateTool.Handles = ArcHandles.new({
 		Color = RotateTool.Color.Color,
-		Parent = Core.UIContainer,
+		Parent = Core.UI,
 		Adornee = Part,
 		ObstacleBlacklist = { BoundingBox.GetBoundingBox() },
 		OnDragStart = OnHandleDragStart,
@@ -447,51 +555,78 @@ function HideHandles()
 
 end;
 
-function RotateSelectionAroundPivot(PivotMode, PivotPoint, Axis, Rotation, InitialPartStates, InitialModelStates)
+function RotateSelectionAroundPivot(PivotMode, PivotPoint, Axis, Rotation, InitialPartStates, InitialModelStates, InitialAttachmentsStates)
 	-- Rotates the given selection around `PivotMode` (using `PivotPoint` if applicable)'s `Axis` by `Rotation`
 
 	-- Create a CFrame that increments rotation by `Rotation` around `Axis`
 	local RotationCFrame = CFrame.fromAxisAngle(Vector3.FromAxis(Axis), math.rad(Rotation));
-
+	
+	local Parts = {}
+	local PartsCFrames = {}
+	
+	-- Calculate the focused part's rotation
+	local RelativeTo
+	
+	if PivotPoint then
+		RelativeTo = PivotPoint * RotationCFrame;
+	end
+	
 	-- Rotate each part
-	for Part, InitialState in pairs(InitialPartStates) do
-
+	for Part, InitialState in InitialPartStates do
+		table.insert(Parts, Part)
+		
 		-- Rotate around the selection's center, or the currently focused part
 		if PivotMode == 'Center' or PivotMode == 'Last' then
 
-			-- Calculate the focused part's rotation
-			local RelativeTo = PivotPoint * RotationCFrame;
-
 			-- Calculate this part's offset from the focused part's rotation
-			local Offset = PivotPoint:toObjectSpace(InitialState.CFrame);
+			local Offset = PivotPoint:Inverse() * InitialState.CFrame;
 
 			-- Rotate relative to the focused part by this part's offset from it
-			Part.CFrame = RelativeTo * Offset;
+			
+			table.insert(PartsCFrames, RelativeTo * Offset);
 
 		-- Rotate around the part's center
 		elseif RotateTool.Pivot == 'Local' then
-			Part.CFrame = InitialState.CFrame * RotationCFrame;
+			table.insert(PartsCFrames, InitialState.CFrame * RotationCFrame)
 
 		end;
 
 	end;
 
 	-- Rotate each model's pivot
-	for Model, InitialState in pairs(InitialModelStates) do
+	for Model, InitialState in InitialModelStates do
 		
 		-- Rotate around the selection's center, or the currently focused part
 		if (PivotMode == 'Center') or (PivotMode == 'Last') then
 
-			-- Calculate the focused part's rotation
-			local RelativeTo = PivotPoint * RotationCFrame
-
 			-- Calculate this part's offset from the focused part's rotation
-			local Offset = PivotPoint:ToObjectSpace(InitialState.Pivot)
+			local Offset = PivotPoint:Inverse() * InitialState.Pivot
 
 			-- Rotate relative to the focused part by this model's offset from it
 			Model.WorldPivot = RelativeTo * Offset
 		end
 	end
+	
+	for Attachment, InitialState in InitialAttachmentsStates do
+
+		-- Rotate around the selection's center, or the currently focused part
+		if PivotMode == 'Center' or PivotMode == 'Last' then
+
+			-- Calculate this part's offset from the focused part's rotation
+			local Offset = PivotPoint:Inverse() * InitialState.WorldCFrame;
+
+			-- Rotate relative to the focused part by this part's offset from it
+			Attachment.WorldCFrame = RelativeTo * Offset;
+
+			-- Rotate around the part's center
+		elseif RotateTool.Pivot == 'Local' or PivotMode == 'Center' and #Selection.Attachments > 0 then
+			Attachment.WorldCFrame = InitialState.WorldCFrame * RotationCFrame;
+
+		end;
+		
+	end
+	
+	game.Workspace:BulkMoveTo(Parts, PartsCFrames)
 
 end;
 
@@ -544,6 +679,8 @@ function GetHandleDisplayDelta(HandleRotation)
 	LastDisplayedRotation = DisplayedRotation;
 
 	-- Return updated display delta
+	
+	print(DisplayedRotation)
 	return DisplayedRotation;
 
 end;
@@ -697,17 +834,72 @@ function SetAxisAngle(Axis, Angle)
 	TrackChange();
 
 	-- Prepare parts to be moved
-	local InitialPartStates = PrepareSelectionForRotating()
+	local InitialPartStates, InitialModelStates, InitialAttachmentsStates = PrepareSelectionForRotating()
+	
+	local FocusedObjectCFrame
+	local NewRotation
 
+	if RotateTool.FocusWise == true and RotateTool.Pivot == "Last" then
+		local FocusedObject = Selection.Focus
+
+		-- Calculate our focused object's new CFrame
+		if FocusedObject:IsA("BasePart") then
+			FocusedObjectCFrame = FocusedObject.CFrame
+			
+			NewRotation = CFrame.new(FocusedObject.Position) * CFrame.fromEulerAnglesXYZ(
+				Axis == 'X' and Angle or FocusedObject.CFrame.Rotation.X,
+				Axis == 'Y' and Angle or FocusedObject.CFrame.Rotation.Y,
+				Axis == 'Z' and Angle or FocusedObject.CFrame.Rotation.Z
+			);
+		else
+			FocusedObjectCFrame = FocusedObject.WorldCFrame
+			
+			NewRotation = CFrame.new(FocusedObject.WorldPosition) * CFrame.fromEulerAnglesXYZ(
+				Axis == 'X' and Angle or FocusedObject.WorldCFrame.Rotation.X,
+				Axis == 'Y' and Angle or FocusedObject.WorldCFrame.Rotation.Y,
+				Axis == 'Z' and Angle or FocusedObject.WorldCFrame.Rotation.Z
+			);
+		end
+
+	end
+	
 	-- Update each part
 	for Part, State in pairs(InitialPartStates) do
+		
+		if RotateTool.FocusWise == true and RotateTool.Pivot == "Last" then
+			-- Get the part's delta to the focused object
+			local RotationDelta = FocusedObjectCFrame:Inverse() * Part.CFrame
 
-		-- Set the part's new CFrame
-		Part.CFrame = CFrame.new(Part.Position) * CFrame.fromOrientation(
-			Axis == 'X' and Angle or math.rad(Part.Orientation.X),
-			Axis == 'Y' and Angle or math.rad(Part.Orientation.Y),
-			Axis == 'Z' and Angle or math.rad(Part.Orientation.Z)
-		);
+			-- Apply the delta to the focused object's new position
+			Part.CFrame = NewRotation * RotationDelta;
+		else
+			-- Set the part's new CFrame
+			Part.CFrame = CFrame.new(Part.Position) * CFrame.fromEulerAnglesXYZ(
+				Axis == 'X' and Angle or Part.CFrame.Rotation.X,
+				Axis == 'Y' and Angle or Part.CFrame.Rotation.Y,
+				Axis == 'Z' and Angle or Part.CFrame.Rotation.Z
+			);
+		end
+
+	end;
+	
+	for Attachment, State in pairs(InitialAttachmentsStates) do
+		
+		if RotateTool.FocusWise == true and RotateTool.Pivot == "Last" then
+			-- Get the attachment's delta to the focused object
+			local RotationDelta = FocusedObjectCFrame:Inverse() * Attachment.WorldCFrame
+
+			-- Apply the delta to the focused object's new position
+			Attachment.WorldCFrame = NewRotation * RotationDelta
+		else
+			-- Set the attachment's new CFrame
+			Attachment.WorldCFrame = CFrame.new(Attachment.WorldPosition) * CFrame.fromEulerAnglesXYZ(
+				Axis == 'X' and Angle or Attachment.WorldCFrame.Rotation.X,
+				Axis == 'Y' and Angle or Attachment.WorldCFrame.Rotation.Y,
+				Axis == 'Z' and Angle or Attachment.WorldCFrame.Rotation.Z
+			);
+		end
+		
 
 	end;
 
@@ -755,10 +947,10 @@ function NudgeSelectionByAxis(Axis, Direction)
 	TrackChange();
 
 	-- Stop parts from moving, and capture the initial state of the parts
-	local InitialPartStates, InitialModelStates = PrepareSelectionForRotating()
+	local InitialPartStates, InitialModelStates, InitialAttachmentsStates = PrepareSelectionForRotating()
 
 	-- Set the pivot point to the center of the selection if in Center mode
-	if RotateTool.Pivot == 'Center' then
+	if RotateTool.Pivot == 'Center' and #Selection.Parts ~= 0 then
 		local BoundingBoxSize, BoundingBoxCFrame = BoundingBox.CalculateExtents(Selection.Parts);
 		PivotPoint = BoundingBoxCFrame;
 
@@ -767,15 +959,14 @@ function NudgeSelectionByAxis(Axis, Direction)
 		if Selection.Focus:IsA 'BasePart' then
 			PivotPoint = Selection.Focus.CFrame
 		elseif Selection.Focus:IsA 'Model' then
-			PivotPoint = Selection.Focus:GetModelCFrame()
-			pcall(function ()
-				PivotPoint = Selection.Focus:GetPivot()
-			end)
+			PivotPoint = Selection.Focus:GetPivot()
+		elseif Selection.Focus:IsA 'Attachment' then
+			PivotPoint = Selection.Focus.WorldCFrame
 		end
 	end;
 
 	-- Perform the rotation
-	RotateSelectionAroundPivot(RotateTool.Pivot, PivotPoint, Axis, NudgeAmount * (Direction or 1), InitialPartStates, InitialModelStates)
+	RotateSelectionAroundPivot(RotateTool.Pivot, PivotPoint, Axis, NudgeAmount * (Direction or 1), InitialPartStates, InitialModelStates, InitialAttachmentsStates)
 
 	-- Update the "degrees rotated" indicator
 	if RotateTool.UI then
@@ -793,6 +984,9 @@ function NudgeSelectionByAxis(Axis, Direction)
 		for Model, State in pairs(InitialModelStates) do
 			Model.WorldPivot = State.Pivot
 		end
+		for Attachment, State in pairs(InitialAttachmentsStates) do
+			Attachment.WorldCFrame = State.WorldCFrame;
+		end;
 	end;
 
 	-- Make joints, restore original anchor and collision states
@@ -814,6 +1008,7 @@ function TrackChange()
 	HistoryRecord = {
 		Parts = Support.CloneTable(Selection.Parts);
 		Models = Support.CloneTable(Selection.Models);
+		Attachments = Support.CloneTable(Selection.Attachments);
 		BeforeCFrame = {};
 		AfterCFrame = {};
 		Selection = Selection.Items;
@@ -836,6 +1031,12 @@ function TrackChange()
 				table.insert(Changes, {
 					Model = Model;
 					Pivot = Record.BeforeCFrame[Model];
+				})
+			end
+			for _, Attachment in pairs(Record.Attachments) do
+				table.insert(Changes, {
+					Attachment = Attachment;
+					Pivot = Record.BeforeCFrame[Attachment];
 				})
 			end
 
@@ -864,6 +1065,12 @@ function TrackChange()
 					Pivot = Record.AfterCFrame[Model];
 				})
 			end
+			for _, Attachment in pairs(Record.Attachments) do
+				table.insert(Changes, {
+					Attachment = Attachment;
+					Pivot = Record.AfterCFrame[Attachment];
+				})
+			end
 
 			-- Send the change request
 			Core.SyncAPI:Invoke('SyncRotate', Changes);
@@ -876,11 +1083,12 @@ function TrackChange()
 	for _, Part in pairs(HistoryRecord.Parts) do
 		HistoryRecord.BeforeCFrame[Part] = Part.CFrame;
 	end;
-	pcall(function ()
-		for _, Model in pairs(HistoryRecord.Models) do
-			HistoryRecord.BeforeCFrame[Model] = Model:GetPivot()
-		end
-	end)
+	for _, Model in pairs(HistoryRecord.Models) do
+		HistoryRecord.BeforeCFrame[Model] = Model:GetPivot()
+	end
+	for _, Attachment in pairs(HistoryRecord.Attachments) do
+		HistoryRecord.BeforeCFrame[Attachment] = Attachment.WorldCFrame;
+	end;
 end;
 
 function RegisterChange()
@@ -900,15 +1108,20 @@ function RegisterChange()
 			CFrame = Part.CFrame;
 		})
 	end;
-	pcall(function ()
-		for _, Model in pairs(HistoryRecord.Models) do
-			HistoryRecord.AfterCFrame[Model] = Model:GetPivot()
-			table.insert(Changes, {
-				Model = Model;
-				Pivot = Model:GetPivot();
-			})
-		end
-	end)
+	for _, Model in pairs(HistoryRecord.Models) do
+		HistoryRecord.AfterCFrame[Model] = Model:GetPivot()
+		table.insert(Changes, {
+			Model = Model;
+			Pivot = Model:GetPivot();
+		})
+	end
+	for _, Attachment in pairs(HistoryRecord.Attachments) do
+		HistoryRecord.AfterCFrame[Attachment] = Attachment.WorldCFrame;
+		table.insert(Changes, {
+			Attachment = Attachment;
+			WorldCFrame = Attachment.WorldCFrame;
+		})
+	end;
 
 	-- Send the change to the server
 	Core.SyncAPI:Invoke('SyncRotate', Changes);
@@ -924,6 +1137,7 @@ function PrepareSelectionForRotating()
 
 	local InitialPartStates = {}
 	local InitialModelStates = {}
+	local InitialAttachmentsStates = {}
 
 	-- Get index of parts
 	local PartIndex = Support.FlipTable(Selection.Parts);
@@ -945,15 +1159,19 @@ function PrepareSelectionForRotating()
 
 	-- Record model pivots
 	-- (temporarily pcalled due to pivot API being in beta)
-	pcall(function ()
-		for _, Model in pairs(Selection.Models) do
-			InitialModelStates[Model] = {
-				Pivot = Model:GetPivot();
-			}
-		end
-	end)
+	for _, Model in pairs(Selection.Models) do
+		InitialModelStates[Model] = {
+			Pivot = Model:GetPivot();
+		}
+	end
+	
+	for _, Attachment in pairs(Selection.Attachments) do
+		InitialAttachmentsStates[Attachment] = {
+			WorldCFrame = Attachment.WorldCFrame;
+		}
+	end
 
-	return InitialPartStates, InitialModelStates
+	return InitialPartStates, InitialModelStates, InitialAttachmentsStates
 end;
 
 function GetIncrementMultiple(Number, Increment)
