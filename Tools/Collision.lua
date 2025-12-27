@@ -1,14 +1,15 @@
 Tool = script.Parent.Parent;
 Core = require(Tool.Core);
+Sounds = Tool:WaitForChild("Sounds");
 
 -- Libraries
 local ListenForManualWindowTrigger = require(Tool.Core:WaitForChild('ListenForManualWindowTrigger'))
+local BoundingBox = require(Tool.Core.BoundingBox)
 
 -- Import relevant references
 Selection = Core.Selection;
 Support = Core.Support;
 Security = Core.Security;
-Support.ImportServices();
 
 -- Initialize the tool
 local CollisionTool = {
@@ -16,7 +17,11 @@ local CollisionTool = {
 	Color = BrickColor.new 'Really black';
 }
 
-CollisionTool.ManualText = [[<font face="GothamBlack" size="16">Collision Tool  🛠</font>
+if table.find(Core.Options.ToolsBlacklist, CollisionTool.Name) then
+	return CollisionTool
+end
+
+CollisionTool.ManualText = [[<font weight="900" size="24"><u><i>Collision Tool  🛠</i></u></font>
 Lets you change whether parts collide with one another.<font size="6"><br /></font>
 
 <b>TIP:</b> Press <b>Enter</b> to toggle collision quickly.]]
@@ -30,6 +35,17 @@ function CollisionTool.Equip()
 	-- Start up our interface
 	ShowUI();
 	BindShortcutKeys();
+	if Selection.DisableHighlights then
+		BoundingBox.StartBoundingBox(function () end)
+	end
+
+	Connections.BoundingBox = Selection.Changed:Connect(function()
+		if Selection.DisableHighlights and not BoundingBox.GetBoundingBox() then
+			BoundingBox.StartBoundingBox(function () end)
+		elseif not Selection.DisableHighlights and BoundingBox.GetBoundingBox() then
+			BoundingBox.ClearBoundingBox()
+		end
+	end)
 
 end;
 
@@ -39,6 +55,7 @@ function CollisionTool.Unequip()
 	-- Clear unnecessary resources
 	HideUI();
 	ClearConnections();
+	BoundingBox.ClearBoundingBox();
 
 end;
 
@@ -56,7 +73,7 @@ function ShowUI()
 	-- Creates and reveals the UI
 
 	-- Reveal UI if already created
-	if UI then
+	if UI and UI.Parent ~= nil then
 
 		-- Reveal the UI
 		UI.Visible = true;
@@ -68,9 +85,13 @@ function ShowUI()
 		return;
 
 	end;
-
+	
+	if UI then
+		UI:Destroy()
+	end
+	
 	-- Create the UI
-	UI = Core.Tool.Interfaces.BTCollisionToolGUI:Clone();
+	UI = Core.Interfaces.BTCollisionToolGUI:Clone();
 	UI.Parent = Core.UI;
 	UI.Visible = true;
 
@@ -82,8 +103,14 @@ function ShowUI()
 	OnButton.MouseButton1Click:Connect(function ()
 		SetProperty('CanCollide', true);
 	end);
+	OnButton.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end);
 	OffButton.MouseButton1Click:Connect(function ()
 		SetProperty('CanCollide', false);
+	end);
+	OffButton.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
 	end);
 
 	-- Hook up manual triggering
@@ -140,7 +167,7 @@ end;
 function SetProperty(Property, Value)
 
 	-- Make sure the given value is valid
-	if Value == nil then
+	if Value == nil or #Selection.Parts <= 0  then
 		return;
 	end;
 
@@ -167,7 +194,7 @@ function BindShortcutKeys()
 	-- Enables useful shortcut keys for this tool
 
 	-- Track user input while this tool is equipped
-	table.insert(Connections, UserInputService.InputBegan:Connect(function (InputInfo, GameProcessedEvent)
+	table.insert(Connections, Core.Services.UserInputService.InputBegan:Connect(function (InputInfo, GameProcessedEvent)
 
 		-- Make sure this is an intentional event
 		if GameProcessedEvent then
@@ -180,7 +207,7 @@ function BindShortcutKeys()
 		end;
 
 		-- Make sure it wasn't pressed while typing
-		if UserInputService:GetFocusedTextBox() then
+		if Core.Services.UserInputService:GetFocusedTextBox() then
 			return;
 		end;
 
