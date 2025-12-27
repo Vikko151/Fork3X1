@@ -1,13 +1,12 @@
 -- Services
-MarketplaceService = Game:GetService 'MarketplaceService';
-HttpService = Game:GetService 'HttpService';
-Workspace = Game:GetService 'Workspace';
+MarketplaceService = game:GetService 'MarketplaceService';
+HttpService = game:GetService 'HttpService';
 
 -- References
 Tool = script.Parent.Parent
 Libraries = Tool:WaitForChild 'Libraries'
 Support = require(Libraries:WaitForChild 'SupportLibrary')
-RegionModule = require(Libraries:WaitForChild 'Region')
+Options = Tool:WaitForChild("Options", 1) and require(Tool.Options)
 
 -- Determine whether we're in tool or plugin mode
 local ToolMode = (Tool.Parent:IsA 'Plugin') and 'Plugin' or 'Tool'
@@ -22,16 +21,16 @@ Security.AreaHeight = 500;
 Security.AllowPublicBuilding = true;
 
 -- Allowed locations in the hierarchy (descendants of which are authorized)
-Security.AllowedLocations = { Workspace };
+Security.AllowedLocations = { game.Workspace };
 
 -- Track the enabling of areas
-Security.Areas = Workspace:FindFirstChild('[Private Building Areas]');
-Workspace.ChildAdded:Connect(function (Child)
+Security.Areas = game.Workspace:FindFirstChild('[Private Building Areas]');
+game.Workspace.ChildAdded:Connect(function (Child)
 	if not Security.Areas and Child.Name == '[Private Building Areas]' then
 		Security.Areas = Child;
 	end;
 end);
-Workspace.ChildRemoved:Connect(function (Child)
+game.Workspace.ChildRemoved:Connect(function (Child)
 	if Security.Areas and Child.Name == '[Private Building Areas]' then
 		Security.Areas = nil;
 	end;
@@ -66,7 +65,7 @@ function Security.IsAreaAuthorizedForPlayer(Area, Player)
 			if PlayerInGroup and not Permission.Ranks then
 				return true;
 
-			-- If specific rank is required, check player rank
+				-- If specific rank is required, check player rank
 			elseif PlayerInGroup and Permission.Ranks then
 				local Symbol, RankNumber = tostring(Permission.Ranks):match('([<>]?=?)([0-9]+)');
 				local PlayerRank = Player:GetRankInGroup(Permission.GroupId);
@@ -88,35 +87,35 @@ function Security.IsAreaAuthorizedForPlayer(Area, Player)
 				end;
 			end;
 
-		-- Check player permissions
+			-- Check player permissions
 		elseif Permission.Type == 'Player' then
 			if (Player.userId == Permission.PlayerId) or (Player.Name == Permission.PlayerName) then
 				return true;
 			end;
 
-		-- Check owner permissions
+			-- Check owner permissions
 		elseif Permission.Type == 'Owner' then
 			if (Player.userId == Permission.PlayerId) or (Player.Name == Permission.PlayerName) then
 				return true;
 			end;
 
-		-- Check auto-permissions
+			-- Check auto-permissions
 		elseif Permission.Type == 'Anybody' then
 			return true;
 
-		-- Check friend permissions
+			-- Check friend permissions
 		elseif Permission.Type == 'Friends' then
 			if Player:IsFriendsWith(Permission.PlayerId) then
 				return true;
 			end;
 
-		-- Check asset permissions
+			-- Check asset permissions
 		elseif Permission.Type == 'Asset' then
 			if MarketplaceService:PlayerOwnsAsset(Player, Permission.AssetId) then
 				return true;
 			end;
 
-		-- Check team permissions
+			-- Check team permissions
 		elseif Permission.Type == 'Team' then
 			if Permission.Team and Player.Team == Permission.Team then
 				return true;
@@ -125,8 +124,8 @@ function Security.IsAreaAuthorizedForPlayer(Area, Player)
 			elseif Permission.TeamName and Player.Team and Player.Team.Name == Permission.TeamName then
 				return true;
 			end;
-		
-		-- Check BC permissions
+
+			-- Check BC permissions
 		elseif Permission.Type == 'NoBC' then
 			if Player.MembershipType == Enum.MembershipType.None then
 				return true;
@@ -148,7 +147,7 @@ function Security.IsAreaAuthorizedForPlayer(Area, Player)
 				return true;
 			end;
 
-		-- Check custom permissions
+			-- Check custom permissions
 		elseif Permission.Type == 'Callback' then
 			return Permission.Callback(Player);
 		end;
@@ -172,8 +171,26 @@ function Security.IsItemAllowed(Item, Player)
 		Item:IsA 'DataModelMesh' or
 		Item:IsA 'Decal' or
 		Item:IsA 'Texture' or
-		Item:IsA 'Light'
+		Item:IsA 'ParticleEmitter' or
+		Item:IsA 'Highlight' or
+		Item:IsA 'SelectionBox' or
+		Item:IsA 'TextLabel' or
+		Item:IsA 'SurfaceGui' or
+		Item:IsA 'Light' or
+		Item:IsA 'Attachment'
 	if not IsItemClassAllowed then
+		return false
+	end
+
+	if Item:FindFirstAncestorWhichIsA("Model") and game.Players:GetPlayerFromCharacter(Item:FindFirstAncestorWhichIsA("Model")) then
+		if Options.PlayerTolerance == 1 and game.Players:GetPlayerFromCharacter(Item:FindFirstAncestorWhichIsA("Model")) == Player then
+			return true
+		elseif Options.PlayerTolerance == 2 then
+			return false
+		end
+	end
+
+	if Options.CheckPermission(Item, Player) == false then
 		return false
 	end
 
@@ -251,7 +268,7 @@ function Security.ArePartsViolatingAreas(Parts, Player, ExemptPartial, AreaPermi
 
 			-- Get parts matched to this area
 			for Region, RegionParts in pairs(RegionMap) do
-				if Region.Area == Area then
+				if Region == Area then
 
 					-- If all parts are on this authorized area, call off any violation
 					if Support.CountKeys(Parts) == #RegionParts then
@@ -269,11 +286,11 @@ function Security.ArePartsViolatingAreas(Parts, Player, ExemptPartial, AreaPermi
 	if #Areas == 0 then
 		return not Security.AllowPublicBuilding;
 
-	-- If authorization for a partial violation-exempt check on an area failed, indicate a violation
+		-- If authorization for a partial violation-exempt check on an area failed, indicate a violation
 	elseif ExemptPartial then
 		return true;
 
-	-- If in authorized areas, determine violation based on public building policy compliance
+		-- If in authorized areas, determine violation based on public building policy compliance
 	elseif RegionMap and not Security.AllowPublicBuilding then
 
 		-- Check area residence of each part's corner
@@ -283,7 +300,10 @@ function Security.ArePartsViolatingAreas(Parts, Player, ExemptPartial, AreaPermi
 				PartCornerCompliance[Part] = PartCornerCompliance[Part] or 0;
 
 				-- Track the number of corners that `Part` has in this region
-				for _, Corner in pairs(Support.GetPartCorners(Part)) do
+				for _, Corner in pairs(Support.GetPartCorners({
+					CFrame = AreaRegion.CFrame * CFrame.new(0, Security.AreaHeight / 2 - AreaRegion.Size.Y / 2, 0),
+					Size = Vector3.new(AreaRegion.Size.X, Security.AreaHeight + AreaRegion.Size.Y, AreaRegion.Size.Z)
+					})) do
 					if AreaRegion:CastPoint(Corner.p) then
 						PartCornerCompliance[Part] = PartCornerCompliance[Part] + 1;
 					end;
@@ -321,12 +341,20 @@ function Security.GetSelectionAreas(Selection, ReturnMap)
 	for _, Area in pairs(Security.Areas:GetChildren()) do
 
 		-- Get all parts from the selection within this area
-		local Region = RegionModule.new(
-			Area.CFrame * CFrame.new(0, Security.AreaHeight / 2 - Area.Size.Y / 2, 0),
-			Vector3.new(Area.Size.X, Security.AreaHeight + Area.Size.Y, Area.Size.Z)
-		);
-		Region.Area = Area
-		local ContainedParts = Region:CastParts(Selection);
+		--		local Region = Instance.new("Part")
+
+		--		Region.CFrame = Area.CFrame * CFrame.new(0, Security.AreaHeight / 2 - Area.Size.Y / 2, 0)
+		--		Region.Size = Vector3.new(Area.Size.X, Security.AreaHeight + Area.Size.Y, Area.Size.Z)
+		--		Region.Anchored = true
+
+		local RegionSettings = OverlapParams.new()
+
+		RegionSettings.FilterType = Enum.RaycastFilterType.Include
+		RegionSettings.FilterDescendantsInstances = Selection
+
+		local ContainedParts = game.Workspace:GetPartBoundsInBox(Area.CFrame * CFrame.new(0, Security.AreaHeight / 2 - Area.Size.Y / 2, 0),
+			Vector3.new(Area.Size.X, Security.AreaHeight + Area.Size.Y, Area.Size.Z),
+			RegionSettings);
 
 		-- If parts are in this area, remember the area
 		if #ContainedParts > 0 then
@@ -334,7 +362,7 @@ function Security.GetSelectionAreas(Selection, ReturnMap)
 
 			-- Map out the parts for each area region
 			if Map then
-				Map[Region] = ContainedParts;
+				Map[Area] = ContainedParts;
 			end;
 		end;
 
