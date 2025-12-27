@@ -1,9 +1,11 @@
 local Tool = script.Parent.Parent.Parent
 local Libraries = Tool:WaitForChild('Libraries')
+local Sounds = Tool:WaitForChild("Sounds");
 
 -- API
 local Core = require(Tool.Core)
 local Selection = Core.Selection
+local BoundingBox = require(Tool.Core.BoundingBox)
 
 -- Libraries
 local Support = require(Libraries:WaitForChild 'SupportLibrary')
@@ -15,45 +17,70 @@ local UIController = {}
 UIController.__index = UIController
 
 function UIController.new(Tool)
-    local self = {
-        Tool = Tool;
+	local self = {
+		Tool = Tool;
 
-        -- State
-        UI = nil;
-        Maid = Maid.new()
-    }
+		-- State
+		UI = nil;
+		Maid = Maid.new()
+	}
 
-    return setmetatable(self, UIController)
+	return setmetatable(self, UIController)
 end
 
 function UIController:ShowUI()
 	-- Creates and reveals the UI
 
 	-- Reveal UI if already created
-	if self.UI then
+	if self.UI and self.UI.Parent ~= nil then
 		self.UI.Visible = true
-        self.Maid.UIUpdater = Support.Loop(0.1, self.UpdateUI, self)
-        self:AttachDragListener()
-        self:AttachAxesListener()
+		self.Maid.UIUpdater = Support.Loop(0.1, self.UpdateUI, self)
+		self:AttachDragListener()
+		self:AttachAxesListener()
 		return
 	end
 
+	if self.UI then
+		self.UI:Destroy()
+	end
+
 	-- Create the UI
-	self.UI = Core.Tool.Interfaces.BTMoveToolGUI:Clone()
+	self.UI = Core.Interfaces.BTMoveToolGUI:Clone()
 	self.UI.Parent = Core.UI
 	self.UI.Visible = true
 
 	-- Add functionality to the axes option switch
 	local AxesSwitch = self.UI.AxesOption
 	AxesSwitch.Global.Button.MouseButton1Down:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Press"))
 		self.Tool:SetAxes('Global')
 	end)
+	AxesSwitch.Global.Button.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end)
 	AxesSwitch.Local.Button.MouseButton1Down:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Press"))
 		self.Tool:SetAxes('Local')
 	end)
+	AxesSwitch.Local.Button.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end)
 	AxesSwitch.Last.Button.MouseButton1Down:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Press"))
 		self.Tool:SetAxes('Last')
 	end)
+	AxesSwitch.Last.Button.MouseEnter:Connect(function ()
+		game:GetService("SoundService"):PlayLocalSound(Sounds:WaitForChild("Hover"))
+	end)
+
+	local FocusToggle = self.UI.FocusOption.Check
+
+	FocusToggle.Activated:Connect(function()
+		self.Tool.FocusWise = not self.Tool.FocusWise
+		UpdateToggleInput(FocusToggle, self.Tool.FocusWise)
+	end)
+
+	UpdateToggleInput(FocusToggle, self.Tool.FocusWise)
 
 	-- Add functionality to the increment input
 	local IncrementInput = self.UI.IncrementOption.Increment.TextBox
@@ -90,30 +117,61 @@ function UIController:ShowUI()
 	ListenForManualWindowTrigger(self.Tool.ManualText, self.Tool.Color.Color, SignatureButton)
 
 	-- Update the UI every 0.1 seconds
-    self.Maid.UIUpdater = Support.Loop(0.1, self.UpdateUI, self)
+	self.Maid.UIUpdater = Support.Loop(0.1, self.UpdateUI, self)
 
-    -- Attach state listeners
-    self:AttachDragListener()
-    self:AttachAxesListener()
+	-- Attach state listeners
+	self:AttachDragListener()
+	self:AttachAxesListener()
 
 end
 
+function UpdateToggleInput(Toggle, Data)
+	-- Updates the data in the given buttons
+
+	-- Go through the inputs and data
+	if Data == true then
+		-- Clear every UI tags
+		Toggle:AddTag("STATE_True")
+		Toggle:RemoveTag("STATE_Multiple")
+
+		--			ShadowsCheckbox.Image = Core.Assets.CheckedCheckbox;
+	elseif Data == false then
+		-- Clear every UI tags
+		Toggle:RemoveTag("STATE_True")
+		Toggle:RemoveTag("STATE_Multiple")
+
+		--			ShadowsCheckbox.Image = Core.Assets.UncheckedCheckbox;
+	elseif Data == nil then
+		-- Clear every UI tags
+		Toggle:RemoveTag("STATE_True")
+		Toggle:AddTag("STATE_Multiple")
+
+		--			ShadowsCheckbox.Image = Core.Assets.SemicheckedCheckbox;
+	end;
+
+end;
+
 function UIController:AttachDragListener()
-    self.Maid.DragListener = self.Tool.DragChanged:Connect(function (Distance)
+	self.Maid.DragListener = self.Tool.DragChanged:Connect(function (Distance)
 
-        -- Update the "distance moved" indicator
-        self.UI.Changes.Text.Text = 'moved ' .. math.abs(Distance) .. ' studs'
+		-- Update the "distance moved" indicator
+		self.UI.Changes.Text.Text = 'moved ' .. math.abs(Distance) .. ' studs'
 
-    end)
+	end)
+end
+
+function UIController:AttachmentsOnlyWarning()
+	-- Update the "distance moved" indicator
+	self.UI.Changes.Text.Text = "Global axis doesn't work when only attachments are selected. Use local or last instead."
 end
 
 function UIController:AttachAxesListener()
-    self.Maid.AxesListener = self.Tool.AxesChanged:Connect(function (AxesMode)
+	self.Maid.AxesListener = self.Tool.AxesChanged:Connect(function (AxesMode)
 
-        -- Update the UI switch
-        Core.ToggleSwitch(AxesMode, self.UI.AxesOption)
+		-- Update the UI switch
+		Core.ToggleSwitch(AxesMode, self.UI.AxesOption)
 
-    end)
+	end)
 end
 
 function UIController:HideUI()
@@ -128,7 +186,7 @@ function UIController:HideUI()
 	self.UI.Visible = false
 
 	-- Stop updating the UI
-    self.Maid:Destroy()
+	self.Maid:Destroy()
 
 end
 
@@ -139,9 +197,12 @@ function UIController:UpdateUI()
 	if not self.UI then
 		return
 	end
+	
+	-- Display the focus wise option only when available
+	self.UI.FocusOption.Visible = self.Tool.Axes ~= "Local" and true or false
 
 	-- Only show and calculate selection info if it's not empty
-	if #Selection.Parts == 0 then
+	if #Selection.Parts == 0 and #Selection.Attachments == 0 then
 		self.UI.Info.Visible = false
 		self.UI.Size = UDim2.new(0, 245, 0, 90)
 		return
@@ -154,16 +215,42 @@ function UIController:UpdateUI()
 	-- Update the position information indicators
 	---------------------------------------------
 
+	local CommonX --= Support.IdentifyCommonItem(XVariations)
+	local CommonY --= Support.IdentifyCommonItem(YVariations)
+	local CommonZ --= Support.IdentifyCommonItem(ZVariations)
+
 	-- Identify common positions across axes
-	local XVariations, YVariations, ZVariations = {}, {}, {}
-	for _, Part in pairs(Selection.Parts) do
-		table.insert(XVariations, Support.Round(Part.Position.X, 3))
-		table.insert(YVariations, Support.Round(Part.Position.Y, 3))
-		table.insert(ZVariations, Support.Round(Part.Position.Z, 3))
+	if self.Tool.FocusWise == false or self.Tool.Axes == "Local" then
+		local XVariations, YVariations, ZVariations = {}, {}, {}
+		
+		for _, Part in pairs(Selection.Parts) do
+			table.insert(XVariations, Support.Round(Part.Position.X, 3))
+			table.insert(YVariations, Support.Round(Part.Position.Y, 3))
+			table.insert(ZVariations, Support.Round(Part.Position.Z, 3))
+		end
+		for _, Attachment in pairs(Selection.Attachments) do
+			table.insert(XVariations, Support.Round(Attachment.WorldCFrame.Position.X, 3))
+			table.insert(YVariations, Support.Round(Attachment.WorldCFrame.Position.Y, 3))
+			table.insert(ZVariations, Support.Round(Attachment.WorldCFrame.Position.Z, 3))
+		end
+		
+		CommonX = Support.IdentifyCommonItem(XVariations)
+		CommonY = Support.IdentifyCommonItem(YVariations)
+		CommonZ = Support.IdentifyCommonItem(ZVariations)
+	else
+		-- Just output the focus/bounding box's position
+		local FocusedObject = self.Tool.Axes == "Global" and BoundingBox.GetBoundingBox() or Selection.Focus
+		
+		if FocusedObject:IsA("BasePart") then
+			CommonX = Support.Round(FocusedObject.Position.X, 3)
+			CommonY = Support.Round(FocusedObject.Position.Y, 3)
+			CommonZ = Support.Round(FocusedObject.Position.Z, 3)
+		else
+			CommonX = Support.Round(FocusedObject.WorldCFrame.Position.X, 3)
+			CommonY = Support.Round(FocusedObject.WorldCFrame.Position.Y, 3)
+			CommonZ = Support.Round(FocusedObject.WorldCFrame.Position.Z, 3)
+		end
 	end
-	local CommonX = Support.IdentifyCommonItem(XVariations)
-	local CommonY = Support.IdentifyCommonItem(YVariations)
-	local CommonZ = Support.IdentifyCommonItem(ZVariations)
 
 	-- Shortcuts to indicators
 	local XIndicator = self.UI.Info.Center.X.TextBox
@@ -184,7 +271,7 @@ function UIController:UpdateUI()
 end
 
 function UIController:FocusIncrementInput()
-    self.UI.IncrementOption.Increment.TextBox:CaptureFocus()
+	self.UI.IncrementOption.Increment.TextBox:CaptureFocus()
 end
 
 return UIController
