@@ -1,12 +1,12 @@
 SupportLibrary = {};
 
+-- Returns the positions of instances of `needle` in table/dictionary`haystack`
 function SupportLibrary.FindTableOccurrences(Haystack, Needle)
-	-- Returns the positions of instances of `needle` in table `haystack`
 
 	local Positions = {};
 
 	-- Add any indexes from `Haystack` that are `Needle`
-	for Index, Value in pairs(Haystack) do
+	for Index, Value in Haystack do
 		if Value == Needle then
 			table.insert(Positions, Index);
 		end;
@@ -15,11 +15,13 @@ function SupportLibrary.FindTableOccurrences(Haystack, Needle)
 	return Positions;
 end;
 
+--[[ Returns one occurrence of `Needle` in `Haystack`
+
+This method is intended to be used in dictionaries. Prefer `table.find` for tables]]
 function SupportLibrary.FindTableOccurrence(Haystack, Needle)
-	-- Returns one occurrence of `Needle` in `Haystack`
 
 	-- Search for the first instance of `Needle` found and return it
-	for Index, Value in pairs(Haystack) do
+	for Index, Value in Haystack do
 		if Value == Needle then
 			return Index;
 		end;
@@ -30,11 +32,12 @@ function SupportLibrary.FindTableOccurrence(Haystack, Needle)
 
 end;
 
+
+-- Returns whether the given `Needle` can be found within table `Haystack`
 function SupportLibrary.IsInTable(Haystack, Needle)
-	-- Returns whether the given `Needle` can be found within table `Haystack`
 
 	-- Go through every value in `Haystack` and return whether `Needle` is found
-	for _, Value in pairs(Haystack) do
+	for _, Value in Haystack do
 		if Value == Needle then
 			return true;
 		end;
@@ -44,18 +47,20 @@ function SupportLibrary.IsInTable(Haystack, Needle)
 	return false;
 end;
 
+--[[ Returns whether the values of tables A and B are the same
+
+REMINDER: table == table will always return false, hence why using this function]]
 function SupportLibrary.DoTablesMatch(A, B)
-	-- Returns whether the values of tables A and B are the same
 
 	-- Check B table differences
-	for Index in pairs(A) do
+	for Index in A do
 		if A[Index] ~= B[Index] then
 			return false;
 		end;
 	end;
 
 	-- Check A table differences
-	for Index in pairs(B) do
+	for Index in B do
 		if B[Index] ~= A[Index] then
 			return false;
 		end;
@@ -65,12 +70,14 @@ function SupportLibrary.DoTablesMatch(A, B)
 	return true;
 end;
 
-function SupportLibrary.Round(Number, Places)
-	-- Returns `Number` rounded to the given number of decimal places (from lua-users)
+--[[ Returns `Number` rounded to the given number of decimal places (from lua-users)
 
+To round at one decimal, prefer `math.round`
+]]
+function SupportLibrary.Round(Number, Places)
 	-- Ensure that `Number` is a number
 	if type(Number) ~= 'number' then
-		return;
+			return;
 	end;
 
 	-- Round the number
@@ -81,34 +88,62 @@ function SupportLibrary.Round(Number, Places)
 	return RoundedNumber;
 end;
 
-function SupportLibrary.CloneTable(Table)
+--[[ Returns a copy of `Table`
+
+If any problem occurs with the modification of sub-tables, use the `DeepClone` argument by setting it to true.
+]]
+function SupportLibrary.CloneTable(Table, DeepClone)
 	-- Returns a copy of `Table`
 
 	local ClonedTable = {};
 
 	-- Copy all values into `ClonedTable`
-	for Key, Value in pairs(Table) do
-		ClonedTable[Key] = Value;
+	for Key, Value in Table do
+		ClonedTable[Key] = DeepClone and type(Value) == "table" and SupportLibrary.CloneTable(Value, true) or Value;
 	end;
 
-	-- Return the clone
 	return ClonedTable;
 end;
 
+--[[ Copies members of the given tables into the specified target table
+
+If two tables have identical indexes, the latest table's value will erase the other's. Consider using `SupportLibrary.Concat` if order doesn't matter and erasure needs to be avoided.
+]]
 function SupportLibrary.Merge(Target, ...)
-	-- Copies members of the given tables into the specified target table
 
 	local Tables = { ... }
 
 	-- Copy members from each table into target
 	for TableOrder, Table in ipairs(Tables) do
-		for Key, Value in pairs(Table) do
+		for Key, Value in Table do
 			Target[Key] = Value
 		end
 	end
 
 	-- Return target
 	return Target
+end
+
+--Returns a table containing every single values of the given object without sub-tables
+function SupportLibrary.ExtractValues(Table)
+
+	local Values = {}
+
+	-- Copy members from each table into target
+	for i, Value in Table do
+		if type(Value) == "table" then
+			local ExtractedValues = SupportLibrary.ExtractValues(Value)
+			
+			for _, SubValue in ExtractedValues do
+				table.insert(Values, SubValue)
+			end
+		else
+			table.insert(Values, Value)
+		end
+	end
+
+	-- Return target
+	return Values
 end
 
 -- Create symbol representing a blank value
@@ -118,14 +153,14 @@ getmetatable(Blank).__tostring = function ()
 	return 'Symbol(Blank)'
 end
 
+-- Copies members of the given tables into the specified target table, including blank values
 function SupportLibrary.MergeWithBlanks(Target, ...)
-	-- Copies members of the given tables into the specified target table, including blank values
 
 	local Tables = { ... }
 
 	-- Copy members from each table into target
 	for TableOrder, Table in ipairs(Tables) do
-		for Key, Value in pairs(Table) do
+		for Key, Value in Table do
 			if Value == Blank then
 				Target[Key] = nil
 			else
@@ -138,10 +173,29 @@ function SupportLibrary.MergeWithBlanks(Target, ...)
 	return Target
 end
 
-function SupportLibrary.GetAllDescendants(Parent)
-	-- Recursively gets all the descendants of `Parent` and returns them
+-- Creates a table with the values of the second one at the position of the first one. Useful to whitelist elements of a table without changes concerning indexes
+function SupportLibrary.FindEquivalences(Table, Target)
+	local First = SupportLibrary.FlipTable(Table)
+	
+	local Result = {}
+	
+	for _, Value in Target do
+		local Index = First[Value]
+		
+		if Index then
+			Result[Index] = Value
+		end
+	end
+	
+	return Result
+end
 
+-- Recursively gets all the descendants of `Parent` and returns them
+function SupportLibrary.GetAllDescendants(Parent)
+
+	--[[
 	local Descendants = {};
+	
 
 	for _, Child in pairs(Parent:GetChildren()) do
 
@@ -153,30 +207,34 @@ function SupportLibrary.GetAllDescendants(Parent)
 			table.insert(Descendants, Subchild);
 		end;
 
-	end;
+	end;]]
+	
+	-- @Vikko151: this one is worrisome...
 
-	return Descendants;
+	return Parent:GetDescendants()--Descendants;
 end;
 
+-- Returns descendants of `Object` which match `Class`
 function SupportLibrary.GetDescendantsWhichAreA(Object, Class)
-	-- Returns descendants of `Object` which match `Class`
-
+--[[
 	local Matches = {}
-
+	
 	-- Check each descendant
-	for _, Descendant in pairs(Object:GetDescendants()) do
+	for _, Descendant in Object:GetDescendants() do
 		if Descendant:IsA(Class) then
 			Matches[#Matches + 1] = Descendant
 		end
 	end
 
 	-- Return matches
-	return Matches
+	return Matches]]
+	
+	return Object:QueryDescendants(Class)
 
 end
 
-function SupportLibrary.FilterArray(Array, Callback)
-	-- Returns a filtered copy of `Array` based on the filter `Callback`
+-- Returns a filtered copy of `Array` based on the filter `Callback`
+function SupportLibrary.FilterArray(Array, Callback: (any, number) -> boolean)
 
 	local FilteredArray = {}
 
@@ -190,8 +248,8 @@ function SupportLibrary.FilterArray(Array, Callback)
 	return FilteredArray
 end
 
+-- Returns a filtered copy of `Map` based on the filter `Callback`
 function SupportLibrary.FilterMap(Map, Callback)
-	-- Returns a filtered copy of `Map` based on the filter `Callback`
 
 	local FilteredMap = {}
 
@@ -205,9 +263,9 @@ function SupportLibrary.FilterMap(Map, Callback)
 	return FilteredMap
 end
 
+-- Recursively gets a count of all the descendants of `Parent` and returns them
 function SupportLibrary.GetDescendantCount(Parent)
-	-- Recursively gets a count of all the descendants of `Parent` and returns them
-
+	--[[
 	local Count = 0;
 
 	for _, Child in pairs(Parent:GetChildren()) do
@@ -218,26 +276,13 @@ function SupportLibrary.GetDescendantCount(Parent)
 		-- Count and add the descendants of each child
 		Count = Count + SupportLibrary.GetDescendantCount(Child);
 
-	end;
+	end;]]
 
-	return Count;
+	return #Parent:GetDescendants()--Count;
 end;
 
-function SupportLibrary.CloneParts(Parts)
-	-- Returns a table of cloned `Parts`
-
-	local Clones = {};
-
-	-- Copy the parts into `Clones`
-	for Index, Part in pairs(Parts) do
-		Clones[Index] = Part:Clone();
-	end;
-
-	return Clones;
-end;
-
+-- Returns a table of string `String` split by pattern `Delimiter`
 function SupportLibrary.SplitString(String, Delimiter)
-	-- Returns a table of string `String` split by pattern `Delimiter`
 
 	local StringParts = {};
 	local Pattern = ('([^%s]+)'):format(Delimiter);
@@ -250,11 +295,15 @@ function SupportLibrary.SplitString(String, Delimiter)
 	return StringParts;
 end;
 
+-- Returns the first child of `Parent` that is of class `ClassName` or nil if it couldn't find any
 function SupportLibrary.GetChildOfClass(Parent, ClassName, Inherit)
-	-- Returns the first child of `Parent` that is of class `ClassName`
-	-- or nil if it couldn't find any
+	
+	-- @Vikko151: changed this to FindFirstChildOfClass()
+	-- like why this Rude Goldberg machine
 
 	-- Look for a child of `Parent` of class `ClassName` and return it
+	
+	--[[
 	if not Inherit then
 		for _, Child in pairs(Parent:GetChildren()) do
 			if Child.ClassName == ClassName then
@@ -267,25 +316,24 @@ function SupportLibrary.GetChildOfClass(Parent, ClassName, Inherit)
 				return Child;
 			end;
 		end;
-	end;
+	end;]]
 
-	return nil;
+	return Inherit and Parent:FindFirstChildOfClass(ClassName) or Parent:FindFirstChildWhichIsA(ClassName)--nil;
 end;
 
+-- Returns a table containing the children of `Parent` that are of class `ClassName`
 function SupportLibrary.GetChildrenOfClass(Parent, ClassName, Inherit)
-	-- Returns a table containing the children of `Parent` that are
-	-- of class `ClassName`
 
 	local Matches = {};
 
 	if not Inherit then
-		for _, Child in pairs(Parent:GetChildren()) do
+		for _, Child in Parent:GetChildren() do
 			if Child.ClassName == ClassName then
 				table.insert(Matches, Child);
 			end;
 		end;
 	else
-		for _, Child in pairs(Parent:GetChildren()) do
+		for _, Child in Parent:GetChildren() do
 			if Child:IsA(ClassName) then
 				table.insert(Matches, Child);
 			end;
@@ -295,10 +343,13 @@ function SupportLibrary.GetChildrenOfClass(Parent, ClassName, Inherit)
 	return Matches;
 end;
 
+-- Returns the RGB equivalent of the given HSV-defined color
 function SupportLibrary.HSVToRGB(Hue, Saturation, Value)
-	-- Returns the RGB equivalent of the given HSV-defined color
 	-- (adapted from some code found around the web)
-
+	
+	-- @Vikko151: Color3.fromHSV() works too.
+	
+	--[[
 	-- If it's achromatic, just return the value
 	if Saturation == 0 then
 		return Value;
@@ -324,13 +375,17 @@ function SupportLibrary.HSVToRGB(Hue, Saturation, Value)
 		return T, P, Value;
 	elseif HueSector == 5 then
 		return Value, P, Q;
-	end;
+	end;]]
+	
+	return Color3.fromHSV(Hue, Saturation, Value)
 end;
 
+-- Returns the HSV equivalent of the given RGB-defined color (adapted from some code found around the web, then replaced with Color3:ToHSV)
 function SupportLibrary.RGBToHSV(Red, Green, Blue)
-	-- Returns the HSV equivalent of the given RGB-defined color
-	-- (adapted from some code found around the web)
-
+	
+	-- @Vikko151: superseded by Color3.new():ToHSV()
+	
+	--[[
 	local Hue, Saturation, Value;
 
 	local MinValue = math.min(Red, Green, Blue);
@@ -362,23 +417,21 @@ function SupportLibrary.RGBToHSV(Red, Green, Blue)
 	Hue = Hue * 60;
 	if Hue < 0 then
 		Hue = Hue + 360;
-	end;
+	end;]]
 
-	return Hue, Saturation, Value;
+	return Color3.new(Red, Green, Blue):ToHSV();
 end;
 
+-- Returns the common item in table `Items`, or `nil` if they vary
 function SupportLibrary.IdentifyCommonItem(Items)
-	-- Returns the common item in table `Items`, or `nil` if
-	-- they vary
-
 	local CommonItem = nil;
 
-	for ItemIndex, Item in pairs(Items) do
+	for ItemIndex, Item in Items do
 
 		-- Set the initial item to compare against
 		if ItemIndex == 1 then
 			CommonItem = Item;
-
+			
 		-- Check if this item is the same as the rest
 		else
 			-- If it isn't the same, there is no common item, so just stop right here
@@ -393,32 +446,47 @@ function SupportLibrary.IdentifyCommonItem(Items)
 	return CommonItem;
 end;
 
+-- Returns the common `Property` value in the instances given in `Items`
 function SupportLibrary.IdentifyCommonProperty(Items, Property)
-	-- Returns the common `Property` value in the instances given in `Items`
-
+	
 	local PropertyVariations = {};
-
+	
 	-- Capture all the variations of the property value
-	for _, Item in pairs(Items) do
-		table.insert(PropertyVariations, Item[Property]);
+	-- @Vikko151: if some values are strange, don't worry. That means that they can bug when normally used, hence why I use some yet strange method for those.
+	
+	for _, Item in Items do
+		if Item:IsA("TextLabel") and Property == "Text" and Item:FindFirstChild("ActualText") then
+			table.insert(PropertyVariations, Item:FindFirstChild("ActualText").Value);
+		elseif Item:IsA("ParticleEmitter") and Property == "LockedToPart" then
+			table.insert(PropertyVariations, Item.LockedToPart);
+		elseif Item:IsA("Highlight") and Property == "DepthMode" then -- There are technical issues with DepthMode.
+			local Value
+			if Item.DepthMode == Enum.HighlightDepthMode.AlwaysOnTop then
+				Value = true
+			else
+				Value = false
+			end
+			table.insert(PropertyVariations, Value);	
+		else
+			table.insert(PropertyVariations, Item[Property]);
+		end
 	end;
-
+	
 	-- Return the common property value
 	return SupportLibrary.IdentifyCommonItem(PropertyVariations);
-
 end;
 
+-- Returns a table of the given part's corners' CFrames
 function SupportLibrary.GetPartCorners(Part)
-	-- Returns a table of the given part's corners' CFrames
 
 	-- Make references to functions called a lot for efficiency
 	local Insert = table.insert;
-	local ToWorldSpace = CFrame.new().toWorldSpace;
+	local ToWorldSpace = function(A, B) return A * B end --CFrame.new().toWorldSpace;
 	local NewCFrame = CFrame.new;
 
 	-- Get info about the part
 	local PartCFrame = Part.CFrame;
-	local SizeX, SizeY, SizeZ = Part.Size.x / 2, Part.Size.y / 2, Part.Size.z / 2;
+	local SizeX, SizeY, SizeZ = Part.Size.X / 2, Part.Size.Y / 2, Part.Size.Z / 2;
 
 	-- Get each corner
 	local Corners = {};
@@ -434,33 +502,57 @@ function SupportLibrary.GetPartCorners(Part)
 	return Corners;
 end;
 
+-- Returns a table containing the part and its respective ancestors (until the `Range` argument)
+function SupportLibrary.GetAncestry(Part, Range)
+	local Hierarchy = {}
+	
+	-- Make references to functions called a lot for efficiency
+	local Insert = table.insert;
+	local Ancestor = Part
+	local OutOfRange = false
+
+	repeat
+		Insert(Hierarchy, Ancestor)
+		
+		Ancestor = Ancestor.Parent
+
+		if Ancestor == Range or Ancestor.Parent == Range.Parent or Range:IsDescendantOf(Ancestor) then
+			OutOfRange = true
+		end
+	until OutOfRange == true
+	
+	return Hierarchy
+end
+
+-- Adds references to common services into the calling environment
 function SupportLibrary.ImportServices()
-	-- Adds references to common services into the calling environment
 
 	-- Get the calling environment
-	local CallingEnvironment = getfenv(2);
+	local CallingEnvironment = {};
 
 	-- Add the services
-	CallingEnvironment.Workspace = Game:GetService 'Workspace';
-	CallingEnvironment.Players = Game:GetService 'Players';
-	CallingEnvironment.MarketplaceService = Game:GetService 'MarketplaceService';
-	CallingEnvironment.ContentProvider = Game:GetService 'ContentProvider';
-	CallingEnvironment.SoundService = Game:GetService 'SoundService';
-	CallingEnvironment.UserInputService = Game:GetService 'UserInputService';
-	CallingEnvironment.SelectionService = Game:GetService 'Selection';
-	CallingEnvironment.CoreGui = Game:GetService 'CoreGui';
-	CallingEnvironment.HttpService = Game:GetService 'HttpService';
-	CallingEnvironment.ChangeHistoryService = Game:GetService 'ChangeHistoryService';
-	CallingEnvironment.ReplicatedStorage = Game:GetService 'ReplicatedStorage';
-	CallingEnvironment.GroupService = Game:GetService 'GroupService';
-	CallingEnvironment.ServerScriptService = Game:GetService 'ServerScriptService';
-	CallingEnvironment.ServerStorage = Game:GetService 'ServerStorage';
-	CallingEnvironment.StarterGui = Game:GetService 'StarterGui';
-	CallingEnvironment.RunService = Game:GetService 'RunService';
+	CallingEnvironment.Workspace = game:GetService 'Workspace';
+	CallingEnvironment.Players = game:GetService 'Players';
+	CallingEnvironment.MarketplaceService = game:GetService 'MarketplaceService';
+	CallingEnvironment.ContentProvider = game:GetService 'ContentProvider';
+	CallingEnvironment.SoundService = game:GetService 'SoundService';
+	CallingEnvironment.UserInputService = game:GetService 'UserInputService';
+	CallingEnvironment.SelectionService = game:GetService 'Selection';
+	CallingEnvironment.CoreGui = game:GetService 'CoreGui';
+	CallingEnvironment.HttpService = game:GetService 'HttpService';
+	CallingEnvironment.ChangeHistoryService = game:GetService 'ChangeHistoryService';
+	CallingEnvironment.ReplicatedStorage = game:GetService 'ReplicatedStorage';
+	CallingEnvironment.GroupService = game:GetService 'GroupService';
+	CallingEnvironment.ServerScriptService = game:GetService 'ServerScriptService';
+	CallingEnvironment.ServerStorage = game:GetService 'ServerStorage';
+	CallingEnvironment.StarterGui = game:GetService 'StarterGui';
+	CallingEnvironment.RunService = game:GetService 'RunService';
+	
+	return CallingEnvironment
 end;
 
+-- Gets the given member for each object in the given list table
 function SupportLibrary.GetListMembers(List, MemberName)
-	-- Gets the given member for each object in the given list table
 
 	local Members = {}
 
@@ -474,8 +566,8 @@ function SupportLibrary.GetListMembers(List, MemberName)
 
 end
 
+-- Maps the given items' specified members to each item
 function SupportLibrary.GetMemberMap(List, MemberName)
-	-- Maps the given items' specified members to each item
 
 	local Map = {}
 
@@ -489,8 +581,8 @@ function SupportLibrary.GetMemberMap(List, MemberName)
 
 end
 
+-- Connects to the given user input event and takes care of standard boilerplate code
 function SupportLibrary.AddUserInputListener(InputState, InputTypeFilter, CatchAll, Callback)
-	-- Connects to the given user input event and takes care of standard boilerplate code
 
 	-- Create input type whitelist
 	local InputTypes = {}
@@ -501,7 +593,7 @@ function SupportLibrary.AddUserInputListener(InputState, InputTypeFilter, CatchA
 	end
 
 	-- Create a UserInputService listener based on the given `InputState`
-	return Game:GetService('UserInputService')['Input' .. InputState]:Connect(function (Input, GameProcessedEvent)
+	return game:GetService('UserInputService')['Input' .. InputState]:Connect(function (Input, GameProcessedEvent)
 
 		-- Make sure this input was not captured by the client (unless `CatchAll` is enabled)
 		if GameProcessedEvent and not CatchAll then
@@ -514,7 +606,7 @@ function SupportLibrary.AddUserInputListener(InputState, InputTypeFilter, CatchA
 		end;
 
 		-- Make sure any key input did not occur while typing into a UI
-		if InputType == Enum.UserInputType.Keyboard and Game:GetService('UserInputService'):GetFocusedTextBox() then
+		if Input.UserInputType == Enum.UserInputType.Keyboard and game:GetService('UserInputService'):GetFocusedTextBox() then
 			return;
 		end;
 
@@ -525,8 +617,8 @@ function SupportLibrary.AddUserInputListener(InputState, InputTypeFilter, CatchA
 
 end;
 
+-- Connects to the given GUI user input event and takes care of standard boilerplate code
 function SupportLibrary.AddGuiInputListener(Gui, InputState, InputTypeFilter, CatchAll, Callback)
-	-- Connects to the given GUI user input event and takes care of standard boilerplate code
 
 	-- Create input type whitelist
 	local InputTypes = {}
@@ -556,13 +648,13 @@ function SupportLibrary.AddGuiInputListener(Gui, InputState, InputTypeFilter, Ca
 
 end;
 
+-- Returns whether the given keys are pressed
 function SupportLibrary.AreKeysPressed(...)
-	-- Returns whether the given keys are pressed
 
 	local RequestedKeysPressed = 0;
 
 	-- Get currently pressed keys
-	local PressedKeys = SupportLibrary.GetListMembers(Game:GetService('UserInputService'):GetKeysPressed(), 'KeyCode');
+	local PressedKeys = SupportLibrary.GetListMembers(game:GetService('UserInputService'):GetKeysPressed(), 'KeyCode');
 
 	-- Go through each requested key
 	for _, Key in pairs({ ... }) do
@@ -579,9 +671,11 @@ function SupportLibrary.AreKeysPressed(...)
 
 end;
 
+-- Inserts all values from given source tables into target
 function SupportLibrary.ConcatTable(TargetTable, ...)
-	-- Inserts all values from given source tables into target
-
+	
+	if not TargetTable then return {} end
+	
 	local SourceTables = { ... }
 
 	-- Insert values from each source table into target
@@ -595,39 +689,68 @@ function SupportLibrary.ConcatTable(TargetTable, ...)
 	return TargetTable
 end
 
+-- Clears out every value in `Table`
 function SupportLibrary.ClearTable(Table)
-	-- Clears out every value in `Table`
-
+	
+	--[[
 	-- Clear each index
 	for Index in pairs(Table) do
 		Table[Index] = nil;
-	end;
-
+	end;]]
+	
 	-- Return the given table
-	return Table;
+	return table.clear(Table)--Table;
 end;
 
-function SupportLibrary.Values(Table)
-	-- Returns all the values in the given table
+-- Returns all the values in the given table
+function SupportLibrary.Values(Table, OrderMatters)
 
 	local Values = {};
 
 	-- Go through each key and get each value
-	for _, Value in pairs(Table) do
-		table.insert(Values, Value);
+	for Index, Value in Table do
+		if OrderMatters then
+			Values[tonumber(Index)] = Value
+		else
+			table.insert(Values, Value);
+		end
 	end;
 
 	-- Return the values
 	return Values;
 end;
 
+-- Return the table with all number inside strings transformed into number. Perfect to fix problems with JSON encoding.
+function SupportLibrary.ToNumeralIndexes(Table, OrderMatters)
+
+	local NewTable = {};
+
+	-- Go through every single keys
+	for i, Value in Table do
+		if type(Value) == "table" then
+			local NumeralTable = SupportLibrary.ToNumeralIndexes(Value)
+			
+			local NewIndex = tonumber(i)
+			
+			NewTable[NewIndex or i] = NumeralTable
+		else
+			local NewIndex = tonumber(i)
+			
+			NewTable[NewIndex or i] = Value
+		end
+	end
+
+	-- Return the values
+	return NewTable;
+end;
+
+-- Returns all the keys in the given table
 function SupportLibrary.Keys(Table)
-	-- Returns all the keys in the given table
 
 	local Keys = {};
 
 	-- Go through each key and get each value
-	for Key in pairs(Table) do
+	for Key in Table do
 		table.insert(Keys, Key);
 	end;
 
@@ -635,8 +758,8 @@ function SupportLibrary.Keys(Table)
 	return Keys;
 end;
 
+-- Returns a callback to `Function` with the given arguments
 function SupportLibrary.Call(Function, ...)
-	-- Returns a callback to `Function` with the given arguments
 	local Args = { ... }
 	return function (...)
 		return Function(unpack(
@@ -645,13 +768,24 @@ function SupportLibrary.Call(Function, ...)
 	end
 end
 
+-- Returns a trimmed version of `String` (adapted from code from lua-users)
 function SupportLibrary.Trim(String)
-	-- Returns a trimmed version of `String` (adapted from code from lua-users)
 	return (String:gsub("^%s*(.-)%s*$", "%1"));
 end
 
+-- Returns a string without the mentioned item (sub check + gsub) or nil if this item isn't present. The arguments are the same as with `string.sub()`, but with gsub's replacements argument
+function SupportLibrary.FindAndRemoveFromString(String, Needle, Init, Replacements)
+	local IsInString = string.sub(String, Init, #Needle) == Needle
+	
+	if IsInString == true then
+		return string.gsub(String, Needle, "", Replacements)
+	end
+		
+	return nil;
+end
+
+-- Returns function that passes arguments through given functions and returns the final result
 function SupportLibrary.ChainCall(...)
-	-- Returns function that passes arguments through given functions and returns the final result
 
 	-- Get the given chain of functions
 	local Chain = { ... };
@@ -674,13 +808,13 @@ function SupportLibrary.ChainCall(...)
 
 end;
 
+-- Returns the number of keys in `Table`
 function SupportLibrary.CountKeys(Table)
-	-- Returns the number of keys in `Table`
 
 	local Count = 0;
 
 	-- Count each key
-	for _ in pairs(Table) do
+	for _ in Table do
 		Count = Count + 1;
 	end;
 
@@ -689,8 +823,8 @@ function SupportLibrary.CountKeys(Table)
 
 end;
 
+-- Returns values from `Start` to `End` in `Table`
 function SupportLibrary.Slice(Table, Start, End)
-	-- Returns values from `Start` to `End` in `Table`
 
 	local Slice = {};
 
@@ -704,13 +838,13 @@ function SupportLibrary.Slice(Table, Start, End)
 
 end;
 
+-- Returns a table with keys and values in `Table` swapped
 function SupportLibrary.FlipTable(Table)
-	-- Returns a table with keys and values in `Table` swapped
 
 	local FlippedTable = {};
 
 	-- Flip each key and value
-	for Key, Value in pairs(Table) do
+	for Key, Value in Table do
 		FlippedTable[Value] = Key;
 	end;
 
@@ -719,8 +853,8 @@ function SupportLibrary.FlipTable(Table)
 
 end;
 
+-- Repeats `Task` every `Interval` seconds until stopped
 function SupportLibrary.ScheduleRecurringTask(TaskFunction, Interval)
-	-- Repeats `Task` every `Interval` seconds until stopped
 
 	-- Create a task object
 	local Task = {
@@ -742,7 +876,7 @@ function SupportLibrary.ScheduleRecurringTask(TaskFunction, Interval)
 	coroutine.wrap(function (Task)
 
 		-- Repeat the task
-		while wait(Task.Interval) and Task.Running do
+		while task.wait(Task.Interval) and Task.Running do
 			Task.TaskFunction();
 		end;
 
@@ -753,8 +887,8 @@ function SupportLibrary.ScheduleRecurringTask(TaskFunction, Interval)
 
 end;
 
+-- Calls the given function repeatedly at the specified interval until stopped
 function SupportLibrary.Loop(Interval, Function, ...)
-	-- Calls the given function repeatedly at the specified interval until stopped
 
 	local Args = { ... }
 
@@ -766,7 +900,7 @@ function SupportLibrary.Loop(Interval, Function, ...)
 
 	-- Start loop
 	coroutine.wrap(function ()
-		while wait(Interval) and Running do
+		while task.wait(Interval) and Running do
 			Function(unpack(Args))
 		end
 	end)()
@@ -775,23 +909,23 @@ function SupportLibrary.Loop(Interval, Function, ...)
 	return Stop
 end
 
+-- Returns the given number, clamped according to the provided min/max
 function SupportLibrary.Clamp(Number, Minimum, Maximum)
-	-- Returns the given number, clamped according to the provided min/max
-
+--[[
 	-- Clamp the number
 	if Minimum and Number < Minimum then
 		Number = Minimum;
 	elseif Maximum and Number > Maximum then
 		Number = Maximum;
-	end;
+	end;]]
 
 	-- Return the clamped number
-	return Number;
+	return math.clamp(Number, Minimum, Maximum) --Number;
 
 end;
 
+-- Returns a new table with values in the opposite order
 function SupportLibrary.ReverseTable(Table)
-	-- Returns a new table with values in the opposite order
 
 	local ReversedTable = {};
 
@@ -805,8 +939,8 @@ function SupportLibrary.ReverseTable(Table)
 
 end;
 
+-- Returns a callback for determining whether to execute consecutive calls
 function SupportLibrary.CreateConsecutiveCallDeferrer(MaxInterval)
-	-- Returns a callback for determining whether to execute consecutive calls
 
 	local LastCallTime
 	local function ShouldExecuteCall()
@@ -816,7 +950,7 @@ function SupportLibrary.CreateConsecutiveCallDeferrer(MaxInterval)
 		LastCallTime = CallTime
 
 		-- Indicate whether call still latest
-		wait(MaxInterval)
+		task.wait(MaxInterval)
 		return LastCallTime == CallTime
 
 	end
