@@ -12,7 +12,8 @@ local function ListenForManualWindowTrigger(Text, ThemeColor, SignatureButton)
 
 	local IsManualOpen = false
 	local ManualHandle = nil
-
+	
+	--[[
 	local function BeginHover()
 		if not IsManualOpen then
 			HelpButton.TextTransparency = 0
@@ -25,21 +26,22 @@ local function ListenForManualWindowTrigger(Text, ThemeColor, SignatureButton)
 			HelpButton.TextTransparency = 0.5
 			HelpButton:WaitForChild('Background').BackgroundTransparency = 0.75
 		end
-	end
+	end]]
 
 	local function ToggleManual()
-		HelpButton.TextTransparency = IsManualOpen and 0 or 0.5
-		HelpButton:WaitForChild('Background').BackgroundTransparency = IsManualOpen and 0 or 0.75
+		
+		Core.AlternateTags(not IsManualOpen, HelpButton, "STATE_Open", "")
 
         -- Close manual if open
         if IsManualOpen then
-			EndHover()
+		--	EndHover()
 			IsManualOpen = false
 			ManualHandle = Roact.unmount(ManualHandle)
+			
 
         -- Open manual if closed
         else
-			BeginHover()
+		--	BeginHover()
 			IsManualOpen = true
 			local ManualElement = Roact.createElement(ToolManualWindow, {
 				Text = Text;
@@ -52,10 +54,6 @@ local function ListenForManualWindowTrigger(Text, ThemeColor, SignatureButton)
 	-- Enable help button
 	SignatureButton.Activated:Connect(ToggleManual)
 	HelpButton.Activated:Connect(ToggleManual)
-	SignatureButton.InputBegan:Connect(BeginHover)
-	SignatureButton.InputEnded:Connect(EndHover)
-	HelpButton.InputBegan:Connect(BeginHover)
-	HelpButton.InputEnded:Connect(EndHover)
 end
 
 return ListenForManualWindowTrigger
