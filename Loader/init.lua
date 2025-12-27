@@ -82,4 +82,45 @@ local DecorateTool = require(CoreTools:WaitForChild 'Decorate')
 Core.AssignHotkey('P', Core.Support.Call(Core.EquipTool, DecorateTool));
 Core.AddToolButton(Core.Assets.DecorateIcon, 'P', DecorateTool)
 
+-- Initialize marketplace tool
+local MarketplaceTool = require(CoreTools:WaitForChild 'Marketplace')
+Core.AssignHotkey('L', Core.Support.Call(Core.EquipTool, MarketplaceTool));
+Core.AddToolButton(Core.Assets.MarketplaceIcon, 'L', MarketplaceTool, UDim2.new(0.5, 0, 0.5, 0), UDim2.new(0.55, 0, 0.55, 0), Vector2.new(0.5, 0.5))
+
+local TextTool = require(CoreTools:WaitForChild 'Text')
+Core.AssignHotkey('T', Core.Support.Call(Core.EquipTool, TextTool));
+Core.AddToolButton(Core.Assets.TextIcon, 'T', TextTool, UDim2.new(0.5, 0, 0.5, 0), UDim2.new(0.5, 0, 0.5, 0), Vector2.new(0.5, 0.5))
+
+local TransformationTool = require(CoreTools:WaitForChild 'Transformation')
+Core.AssignHotkey('Q', Core.Support.Call(Core.EquipTool, TransformationTool));
+Core.AddToolButton(Core.Assets.TransformationIcon, 'Q', TransformationTool, UDim2.new(0.5, 0, 0.5, 0), UDim2.new(0.55, 0, 0.55, 0), Vector2.new(0.5, 0.5))
+
+local AttachmentTool = require(CoreTools:WaitForChild 'Attachment')
+Core.AssignHotkey('Y', Core.Support.Call(Core.EquipTool, AttachmentTool));
+Core.AddToolButton(Core.Assets.AttachmentIcon, 'Y', AttachmentTool, UDim2.new(0.5, 0, 0.5, 0), UDim2.new(0.55, 0, 0.55, 0), Vector2.new(0.5, 0.5))
+
+-- Once everything is initialised, parent everything in a model in PlayerScripts so equipping the tool doesn't cause lag
+
+
+
+if not Core.Plugin and Core.Options.StoreFilesInPlayer then
+	ToolContainer = Instance.new("Tool")
+	ToolContainer.Name = "Fork3XComponents"
+	ToolContainer.Parent = game.Players.LocalPlayer.PlayerScripts
+	
+	for _, Child in Tool:GetChildren() do
+		if not Child:IsA("BasePart") then
+			Child.Parent = ToolContainer
+		end
+	end
+	
+	coroutine.wrap(function()
+		while task.wait(0.5) do
+			if Tool == nil or Tool.Parent == nil then
+				ToolContainer:Destroy()
+			end
+		end
+	end)()
+end
+
 return Core
