@@ -29,7 +29,7 @@ function SnapTracking.StartTracking(Callback)
 	SnapTracking.SetCallback(Callback);
 
 	-- Start tracking mouse movement
-	function UpdateTrackingTarget(Input)
+	local function UpdateTrackingTarget(Input)
 
 		-- Blacklist the player's character and the items in `TargetBlacklist`
 		local TargetBlacklist = Support.ConcatTable(
@@ -38,8 +38,8 @@ function SnapTracking.StartTracking(Callback)
 		);
 
 		-- Find the current target part and point
-		local TargetRay = Workspace.CurrentCamera:ScreenPointToRay(Input.Position.X, Input.Position.Y);
-		local TargetPart, TargetPoint, TargetNormal, TargetMaterial = Workspace:FindPartOnRayWithIgnoreList(
+		local TargetRay = workspace.CurrentCamera:ScreenPointToRay(Input.Position.X, Input.Position.Y);
+		local TargetPart, TargetPoint, TargetNormal, TargetMaterial = workspace:FindPartOnRayWithIgnoreList(
 			Ray.new(TargetRay.Origin, TargetRay.Direction * 5000),
 			TargetBlacklist
 		);
@@ -76,7 +76,7 @@ end;
 
 function SnapTracking.StartUI()
 	-- Creates the point marking UI
-	SnapTracking.PointMarker = Core.Tool.Interfaces.PointMarker:Clone();
+	SnapTracking.PointMarker = Core.Interfaces.PointMarker:Clone();
 	SnapTracking.PointMarker.Parent = Core.UI;
 end;
 
@@ -128,7 +128,7 @@ function SnapTracking.UpdateUI(Point)
 	end;
 
 	-- Map the point's position on the screen
-	local PointPosition, PointVisible = Workspace.CurrentCamera:WorldToScreenPoint(Point.p);
+	local PointPosition, PointVisible = workspace.CurrentCamera:WorldToScreenPoint(Point.p);
 
 	-- Move the point marker UI to the point's position on the screen
 	SnapTracking.PointMarker.Visible = PointVisible;
