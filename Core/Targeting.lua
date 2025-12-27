@@ -17,12 +17,59 @@ local IndicatorText
 TargetingModule = {};
 TargetingModule.TargetingMode = 'Scoped'
 TargetingModule.TargetingModeChanged = Signal.new()
-TargetingModule.Scope = Workspace
+TargetingModule.Scope = Options.GetScope()
+TargetingModule.ScopeParts = {}
+TargetingModule.StartPoint = Vector2.new();
+TargetingModule.EndPoint = Vector2.new();
 TargetingModule.IsScopeLocked = true
+TargetingModule.MobileRectangleSelect = 0
+TargetingModule.IsMobileRectangleSelecting = false
+TargetingModule.MobileRectangleSelectChanged = Signal.new()
 TargetingModule.TargetChanged = Signal.new()
 TargetingModule.ScopeChanged = Signal.new()
 TargetingModule.ScopeTargetChanged = Signal.new()
 TargetingModule.ScopeLockChanged = Signal.new()
+
+local CanResetSelectionMode = true
+
+-- Creates an invisible ImageButton to avoid any input to be sunk by Roblox's camera module
+local function CreateInputCaptureButton(Parent)
+	InputCapture = Instance.new("ImageButton")
+	InputCapture.BackgroundTransparency = 1
+	InputCapture.ImageTransparency = 1
+	InputCapture.Size = UDim2.fromScale(1, 1)
+	InputCapture.ZIndex = -99
+	InputCapture.AutoButtonColor = false
+	InputCapture.Name = "InputPass"
+	InputCapture.Parent = Parent
+end
+
+function TargetingModule:ToggleMobileRectangleSelect()
+	CanResetSelectionMode = false
+	
+	TargetingModule.CancelRectangleSelecting()
+	
+	local Increment = TargetingModule.MobileRectangleSelect + 1
+	
+	print(Increment)
+	
+	TargetingModule.MobileRectangleSelect = math.min(Increment, 2) == Increment and Increment or 0
+	TargetingModule.MobileRectangleSelectChanged:Fire()
+
+	if TargetingModule.MobileRectangleSelect ~= 0 then
+		if InputCapture then
+			InputCapture.Parent = GetCore().UI
+		else
+			CreateInputCaptureButton(GetCore().UI)
+		end
+	elseif InputCapture then
+		InputCapture.Parent = nil
+	end
+	
+	task.wait()
+	
+	CanResetSelectionMode = true
+end
 
 function TargetingModule:EnableTargeting()
 	-- 	Begin targeting parts from the mouse
@@ -48,8 +95,10 @@ function TargetingModule:EnableTargeting()
 	end);
 
 	-- Listen for 2D selection
-	Connections.RectSelectionStarted = Mouse.Button1Down:Connect(self.StartRectangleSelecting);
-	Connections.RectSelectionFinished = Support.AddUserInputListener('Ended', 'MouseButton1', true, self.FinishRectangleSelecting);
+	Connections.RectSelectionStarted = UserInputService.TouchEnabled and Support.AddUserInputListener('Began', 'Touch', true, self.ToggleMobileRectangleSelection, 2) 
+		or Mouse.Button1Down:Connect(self.StartRectangleSelecting);
+	Connections.RectSelectionFinished = not UserInputService.TouchEnabled and Support.AddUserInputListener('Ended', 'MouseButton1', true, self.FinishRectangleSelecting, 2)
+		or Support.AddUserInputListener('Ended', 'Touch', true, self.FinishRectangleSelecting, 2);
 
 	-- Hide target box when tool is unequipped
 	Connections.HideTargetBoxOnDisable = Core.Disabling:Connect(self.HighlightTarget);
@@ -65,7 +114,6 @@ function TargetingModule:EnableTargeting()
 
 	-- Enable targeting mode hotkeys
 	self:BindTargetingModeHotkeys()
-
 end;
 
 function TargetingModule:SetScope(Scope)
@@ -99,7 +147,7 @@ function TargetingModule:FindTargetInScope(Target, Scope)
 	end
 
 	-- If in direct targeting mode, return target
-	if self.TargetingMode == 'Direct' and (Target:IsDescendantOf(Scope)) then
+	if self.TargetingMode == 'Direct' and Target:IsDescendantOf(Scope) then
 		return Target
 	end
 
@@ -125,32 +173,37 @@ function TargetingModule:UpdateTarget(Scope, Force)
 	-- Get target
 	local NewTarget = Mouse.Target
 	local NewScopeTarget = self:FindTargetInScope(NewTarget, Scope)
-	
+
 	local Core = GetCore()
-	
+
 	if Options.PartHintFunction ~= false then
 		if not IndicatorText then
 			IndicatorText = Make 'TextLabel' {
 				Name = "IndicatorText";
+				--			Font = Enum.Font.MontserratMedium;
 				Parent = Core.UI;
-				Size = UDim2.new(0, 0, 0, 0);
-				TextColor3 = Color3.new(1, 1, 1);
-				TextTransparency = 0;
-				TextStrokeTransparency = 0;
-				TextSize = 8;
-				BackgroundTransparency = 1;
+				--			Size = UDim2.new(0, 0, 0, 0);
+				--			TextColor3 = Color3.new(1, 1, 1);
+				--			TextTransparency = 0;
+				--			TextStrokeTransparency = 0.4;
+				--			TextSize = 12;
+				--			BackgroundTransparency = 1;
 				--		Position = UDim2.new(0, Mouse.X + 20, 0, Mouse.Y - 26);
+				RBXTAG_Indicator = true;
 				AutomaticSize = Enum.AutomaticSize.XY;
 			};
 		end
 
 		IndicatorText.Position = UDim2.new(0, Mouse.X + 16, 0, Mouse.Y + 19);
-	
-		if NewTarget == nil or NewTarget.Locked == true then
-			IndicatorText.TextTransparency = 1
-		else
-			IndicatorText.Text = Options.PartHintFunction(NewTarget, game.Players.LocalPlayer)
-			IndicatorText.TextTransparency = 0
+
+		if (not NewTarget or Options.ConsiderPart(NewTarget) == false) and not IndicatorText:HasTag("STATE_Invisible") then
+			IndicatorText:AddTag("STATE_Invisible")
+		elseif NewTarget and Options.ConsiderPart(NewTarget) == true then
+			if IndicatorText:HasTag("STATE_Invisible") then
+				IndicatorText:RemoveTag("STATE_Invisible")
+			end
+			IndicatorText.Text = Options.PartHintFunction(Core, NewTarget, game.Players.LocalPlayer)
+			--	IndicatorText.TextTransparency = 0
 		end
 	end
 
@@ -163,10 +216,11 @@ function TargetingModule:UpdateTarget(Scope, Force)
 	end
 
 	-- Make sure target is selectable
-	
+
 	if not Core.IsSelectable({ NewTarget }) then
 		if Options.PartHintFunction ~= false then
-			IndicatorText.TextColor3 = Color3.new(1, 0, 0)
+			IndicatorText:AddTag("STATE_Forbidden")
+			--			IndicatorText.TextColor3 = Color3.new(1, 0, 0)
 		end
 		self.HighlightTarget(nil)
 		self.LastTarget = nil
@@ -175,9 +229,11 @@ function TargetingModule:UpdateTarget(Scope, Force)
 		self.ScopeTargetChanged:Fire(nil)
 		return
 	end
-	
-	if Options.PartHintFunction ~= false then
-		IndicatorText.TextColor3 = Color3.new(1, 1, 1)
+
+
+
+	if Options.PartHintFunction ~= false and IndicatorText:HasTag("STATE_Forbidden") then
+		IndicatorText:RemoveTag("STATE_Forbidden")
 	end
 
 	-- Register whether scope target has changed
@@ -215,13 +271,7 @@ end
 
 -- Create target box pool
 local TargetBoxPool = InstancePool.new(60, function ()
-	return Make 'SelectionBox' {
-		Name = 'BTTargetBox',
-		Parent = GetCore().UI,
-		LineThickness = 0.025,
-		Transparency = 0.5,
-		Color = BrickColor.new 'Institutional white'
-	}
+	return Make('SelectionBox')(Options.TargetBoxMake(GetCore()))
 end)
 
 -- Define target box cleanup routine
@@ -266,8 +316,25 @@ local function IsAncestorSelected(Item)
 	end
 end
 
+local HandlesTool = {
+	["Move Tool"] = function(Module) return Module.HandleDragging.IsHandleDragging end,
+	["Resize Tool"] = function(Module) return Module.HandleResizing end,
+	["Rotate Tool"] = function(Module) return Module.HandleRotating end,
+}
+
 function TargetingModule.SelectTarget(Force)
 	local Scope = TargetingModule.Scope
+
+
+
+	if GetCore().CurrentTool and HandlesTool[GetCore().CurrentTool.Name] then
+		-- Delay to check whether the user is dragging the handle
+		-- This is necessary to not select another part while dragging
+		task.wait()
+		if HandlesTool[GetCore().CurrentTool.Name](GetCore().CurrentTool) then
+			return
+		end
+	end
 
 	-- Update target
 	local Target, ScopeTarget = TargetingModule:UpdateTarget(Scope, true)
@@ -301,7 +368,7 @@ function TargetingModule.SelectTarget(Force)
 		Selection.Add({ ScopeTarget }, true)
 		Selection.SetFocus(ScopeTarget)
 
-	-- Replace selection if not multiselecting
+		-- Replace selection if not multiselecting
 	else
 		Selection.Replace({ ScopeTarget }, true)
 		Selection.SetFocus(ScopeTarget)
@@ -337,6 +404,57 @@ function TargetingModule.SelectSiblings(Part, ReplaceSelection)
 
 end;
 
+function TargetingModule.ToggleMobileRectangleSelection()	
+	if TargetingModule.MobileRectangleSelect == 1 then
+		
+		TargetingModule.IsMobileRectangleSelecting = true
+		
+		local Core = GetCore()
+		
+		local function WatchSmoothSelection(Input: InputObject)
+			if Input and typeof(Input) == "InputObject" and Input.UserInputState ~= Enum.UserInputState.Change then
+				return
+			end
+			
+			local InputPosition = Input.Position
+			
+			local SmoothSelectionRaycastParams = RaycastParams.new()
+			
+			local ScreenRay = workspace.CurrentCamera:ScreenPointToRay(InputPosition.X, InputPosition.Y)
+			local Raycast = workspace:Raycast(ScreenRay.Origin, ScreenRay.Direction * 9999, SmoothSelectionRaycastParams)
+			
+			if Raycast and Core.IsSelectable({Raycast.Instance}) then
+				local ScopeTarget = TargetingModule:FindTargetInScope(Raycast.Instance, TargetingModule.Scope)
+				Selection.Add({ScopeTarget})
+			end
+		end
+		
+		Core.Connections.WatchSmoothSelection = Support.AddUserInputListener('Changed', 'Touch', true, WatchSmoothSelection);
+		
+		Core.Connections.EndSmoothSelection = Support.AddUserInputListener('Ended', 'Touch', true, function()
+			Core.Connections.WatchSmoothSelection:Disconnect()
+			Core.Connections.EndSmoothSelection:Disconnect()
+			
+			Core.Connections.WatchSmoothSelection = nil
+			Core.Connections.EndSmoothSelection = nil
+			
+			TargetingModule.IsMobileRectangleSelecting = false
+			
+			if TargetingModule.MobileRectangleSelect == 1 then
+				TargetingModule.MobileRectangleSelect = 0
+				if InputCapture then
+					InputCapture.Parent = nil
+				end
+				TargetingModule.MobileRectangleSelectChanged:Fire()
+			end
+		end);
+	elseif TargetingModule.MobileRectangleSelect == 2 then
+		TargetingModule.IsMobileRectangleSelecting = true
+		
+		TargetingModule.StartRectangleSelecting()
+	end
+end
+
 function TargetingModule.StartRectangleSelecting()
 
 	-- Ensure selection isn't cancelled
@@ -347,20 +465,25 @@ function TargetingModule.StartRectangleSelecting()
 	-- Mark where rectangle selection started
 	RectangleSelectStart = Vector2.new(Mouse.X, Mouse.Y);
 
-	-- Track mouse while rectangle selecting
-	GetCore().Connections.WatchRectangleSelection = Mouse.Move:Connect(function ()
+	local function WatchRectangleSelection(Input: InputObject)
+		if Input and typeof(Input) == "InputObject" and Input.UserInputState ~= Enum.UserInputState.Change then
+			return
+		end
 
 		-- If rectangle selecting, update rectangle
 		if RectangleSelecting then
 			TargetingModule.UpdateSelectionRectangle();
 
-		-- Watch for potential rectangle selections
+			-- Watch for potential rectangle selections
 		elseif RectangleSelectStart and (Vector2.new(Mouse.X, Mouse.Y) - RectangleSelectStart).magnitude >= 10 then
 			RectangleSelecting = true;
 			SelectionCancelled = true;
 		end;
+	end
 
-	end);
+	-- Track mouse while rectangle selecting
+	GetCore().Connections.WatchRectangleSelection = not UserInputService.TouchEnabled and Mouse.Move:Connect(WatchRectangleSelection) or 
+		Support.AddUserInputListener('Changed', 'Touch', true, WatchRectangleSelection) ;
 
 end;
 
@@ -376,15 +499,30 @@ function TargetingModule.UpdateSelectionRectangle()
 
 	-- Create selection rectangle
 	if not SelectionRectangle then
+		SelectionRectangle = Make('Frame')(Core.Options.SelectionRectangleMake(Core))
+
+		--[[
 		SelectionRectangle = Make 'Frame' {
 			Name = 'SelectionRectangle',
 			Parent = Core.UI,
-			BackgroundColor3 = Color3.fromRGB(100, 100, 100),
-			BorderColor3 = Color3.new(0, 0, 0),
-			BackgroundTransparency = 0.5,
-			BorderSizePixel = 1
+			BackgroundColor3 = Color3.new(0, 0, 0),
+			BackgroundTransparency = 0.6,
+			BorderSizePixel = 0
 		};
+		
+		UIStroke = Make 'UIStroke' {
+			Name = 'BTStroke',
+			Parent = SelectionRectangle,
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.new(0, 0, 0);
+			Thickness = 2;
+			LineJoinMode = Enum.LineJoinMode.Miter,
+		};]]
 	end;
+
+	if SelectionRectangle:FindFirstChild("BTStroke") then
+		SelectionRectangle.BTStroke.Color = Selection.Color.Color
+	end
 
 	local StartPoint = Vector2.new(
 		math.min(RectangleSelectStart.X, Mouse.X),
@@ -412,9 +550,20 @@ function TargetingModule.CancelRectangleSelecting()
 
 	-- Clear rectangle selection watcher
 	local Connections = GetCore().Connections;
+	
 	if Connections.WatchRectangleSelection then
 		Connections.WatchRectangleSelection:Disconnect();
 		Connections.WatchRectangleSelection = nil;
+	end;
+	
+	if Connections.WatchSmoothSelection then
+		Connections.WatchSmoothSelection:Disconnect()
+		Connections.WatchSmoothSelection = nil
+	end;
+	
+	if Connections.EndSmoothSelection then
+		Connections.EndSmoothSelection:Disconnect()
+		Connections.EndSmoothSelection = nil
 	end;
 
 	-- Clear rectangle UI
@@ -430,6 +579,11 @@ function TargetingModule.CancelSelecting()
 end;
 
 function TargetingModule.FinishRectangleSelecting()
+
+	if UserInputService.TouchEnabled and TargetingModule.MobileRectangleSelect == 0 then
+		return
+	end
+
 	local Core = GetCore()
 
 	local RectangleSelecting = RectangleSelecting;
@@ -437,7 +591,15 @@ function TargetingModule.FinishRectangleSelecting()
 
 	-- Clear rectangle selection
 	TargetingModule.CancelRectangleSelecting();
-
+	
+	if TargetingModule.MobileRectangleSelect == 2 and CanResetSelectionMode then
+		TargetingModule.MobileRectangleSelect = 0
+		if InputCapture then
+			InputCapture.Parent = nil
+		end
+		TargetingModule.MobileRectangleSelectChanged:Fire()
+	end
+	
 	-- Ensure rectangle selection is ongoing
 	if not RectangleSelecting then
 		return;
@@ -462,7 +624,102 @@ function TargetingModule.FinishRectangleSelecting()
 
 	-- Find items that lie within the rectangle
 	local ScopeParts = Support.GetDescendantsWhichAreA(TargetingModule.Scope, 'BasePart')
-	for _, Part in pairs(ScopeParts) do
+
+	for i, Part in ScopeParts do
+		local ScreenPoint, OnScreen = workspace.CurrentCamera:WorldToScreenPoint(Part.Position)
+		if OnScreen then
+			--local LeftCheck = ScreenPoint.X >= StartPoint.X
+			--local RightCheck = ScreenPoint.X <= EndPoint.X
+			--local TopCheck = ScreenPoint.Y >= StartPoint.Y
+			--local BottomCheck = ScreenPoint.Y <= EndPoint.Y
+			local XCheck = math.clamp(ScreenPoint.X, StartPoint.X, EndPoint.X) == ScreenPoint.X
+			local YCheck = math.clamp(ScreenPoint.Y, StartPoint.Y, EndPoint.Y) == ScreenPoint.Y
+			if XCheck and YCheck and Core.IsSelectable({ Part }) then
+				local ScopeTarget = TargetingModule:FindTargetInScope(Part, TargetingModule.Scope)
+				SelectableItems[ScopeTarget] = true
+			end
+		end
+		if i % 1000 == 0 then
+			task.wait(0.01)
+		end
+	end
+
+	-- Add to selection if multiselecting
+	if Selection.Multiselecting then
+		Selection.Add(Support.Keys(SelectableItems), true)
+
+		-- Replace selection if not multiselecting
+	else
+		Selection.Replace(Support.Keys(SelectableItems), true)
+	end;
+
+end;
+
+--[[
+
+function TargetingModule.FinishRectangleSelecting()
+	
+	if UserInputService.TouchEnabled and TargetingModule.MobileRectangleSelect == false then
+		return
+	end
+	
+	local Core = GetCore()
+
+	local RectangleSelecting = RectangleSelecting;
+	local RectangleSelectStart = RectangleSelectStart;
+
+	-- Clear rectangle selection
+	TargetingModule.CancelRectangleSelecting();
+
+	-- Ensure rectangle selection is ongoing
+	
+	if not RectangleSelecting then
+		return;
+	end;
+
+	-- Ensure a targeting scope is set
+	if not TargetingModule.Scope then
+		return
+	end
+
+	-- Get rectangle dimensions
+	local StartPoint = Vector2.new(
+		math.min(RectangleSelectStart.X, Mouse.X),
+		math.min(RectangleSelectStart.Y, Mouse.Y)
+	);
+	local EndPoint = Vector2.new(
+		math.max(RectangleSelectStart.X, Mouse.X),
+		math.max(RectangleSelectStart.Y, Mouse.Y)
+	);
+	
+	print(StartPoint, EndPoint)
+
+	local SelectableItems = {};
+	
+	local RectangleMonitors = Core.ParallelCores
+
+	-- Find items that lie within the rectangle
+	TargetingModule.ScopeParts = Support.GetDescendantsWhichAreA(TargetingModule.Scope, 'BasePart')
+	TargetingModule.StartPoint = StartPoint
+	TargetingModule.EndPoint = EndPoint
+	
+	local BreakFactor = 1
+	
+	local Results = {}
+	
+	if not Selection.Multiselecting then
+		Selection.Clear(true)
+	end
+	
+	-- Split the task between actors
+	-- In some words, we send the table alongside of a number that will allow the actor to only proceed a smaller part of the table
+	-- We can thus split the task wisely all by keeping throttling out of Roblox's engine
+	
+--	local SplitExtra = #ScopeParts % 4
+--	local DefaultSlice = (#ScopeParts - SplitExtra) // 4
+	
+
+	--[[for i, Part in pairs(ScopeParts) do
 		local ScreenPoint, OnScreen = Workspace.CurrentCamera:WorldToScreenPoint(Part.Position)
 		if OnScreen then
 			local LeftCheck = ScreenPoint.X >= StartPoint.X
@@ -474,18 +731,66 @@ function TargetingModule.FinishRectangleSelecting()
 				SelectableItems[ScopeTarget] = true
 			end
 		end
+		if math.floor(i / (300 * BreakFactor)) ~= 0 then
+			task.wait()
+			BreakFactor += 1
+		end
 	end
 
-	-- Add to selection if multiselecting
-	if Selection.Multiselecting then
-		Selection.Add(Support.Keys(SelectableItems), true)
+			-- Add to selection if multiselecting
+		if Selection.Multiselecting then
+			Selection.Add(SelectableItems, true)
+			-- Replace selection if not multiselecting
+		else
+			Selection.Replace(SelectableItems, true)
+		end;
+	end]]
 
-	-- Replace selection if not multiselecting
-	else
-		Selection.Replace(Support.Keys(SelectableItems), true)
-	end;
+	--[[
+	local function Setup(i)
+		local Monitor = RectangleMonitors[i]
 
-end;
+		local FromExtra = i == 1 and 1 or SplitExtra + 1
+		local ToExtra = i == 1 and -SplitExtra + 1 or 1
+
+		local From = DefaultSlice * (i - 1) + FromExtra
+		local To = From + DefaultSlice - ToExtra
+
+		Monitor:SendMessage("fetch", ScopeParts, From, To, StartPoint, EndPoint)
+
+		Monitor.Thread.Done.Event:Wait()
+
+		DoneCount += 1
+
+		if DoneCount == 8 then
+		--	Then()
+		end
+		print("first")
+	end
+	
+	coroutine.wrap(Setup)(2)	coroutine.wrap(Setup)(1)
+	coroutine.wrap(Setup)(3)
+	coroutine.wrap(Setup)(4)
+	coroutine.wrap(Setup)(5)
+	coroutine.wrap(Setup)(6)
+	coroutine.wrap(Setup)(7)
+	coroutine.wrap(Setup)(8)
+	
+
+	for _, Thread in RectangleMonitors do
+		Thread:SendMessage("fetch")
+	end
+	
+	--[[
+	Core.DoneEvent.Event:Once(function(Table)
+		Results = Table
+		
+		Then()
+	end)
+	
+	--Core.ParallelCores[1]:SendMessage("fetch", Core.ParallelCores, SplitExtra, DefaultSlice, ScopeParts, StartPoint, EndPoint)
+	
+end;]]
 
 function TargetingModule.PrismSelect()
 	-- Selects parts in the currently selected parts
@@ -498,10 +803,16 @@ function TargetingModule.PrismSelect()
 	-- Get core API
 	local Core = GetCore();
 
+	local PotentialPartsParams = OverlapParams.new()
+	PotentialPartsParams.FilterType = Enum.RaycastFilterType.Exclude
+	PotentialPartsParams.FilterDescendantsInstances = Selection.Items
+
+
 	-- Get region for selection items and find potential parts
-	local Extents = require(Core.Tool.Core.BoundingBox).CalculateExtents(Selection.Items, nil, true);
+	local Extents = require(Core.Libraries.Parent.Core.BoundingBox).CalculateExtents(Selection.Items, nil, nil, true);
 	local Region = Region3.new(Extents.Min, Extents.Max);
-	local PotentialParts = game.Workspace:FindPartsInRegion3WithIgnoreList(Region, Selection.Items, math.huge);
+	--local PotentialParts = game.Workspace:FindPartsInRegion3WithIgnoreList(Region, Selection.Items, math.huge);
+	local PotentialParts = game.Workspace:GetPartBoundsInBox(Region.CFrame, Region.Size, PotentialPartsParams);
 
 	-- Enable collision on all potential parts
 	local OriginalState = {};
@@ -517,7 +828,7 @@ function TargetingModule.PrismSelect()
 	for _, Part in pairs(Selection.Items) do
 		local TouchingParts = Part:GetTouchingParts();
 		for _, TouchingPart in pairs(TouchingParts) do
-			if not Selection.IsSelected(TouchingPart) then
+			if not Selection.IsSelected(TouchingPart) and Core.IsSelectable({Part}) then
 				Parts[TouchingPart] = true;
 			end;
 		end;
@@ -566,7 +877,7 @@ function TargetingModule:EnableScopeSelection()
 					Scoping = self.Scope
 				end
 
-			-- If Alt-Shift-Z is pressed, exit current scope
+				-- If Alt-Shift-Z is pressed, exit current scope
 			elseif Scoping and IsAltPressed and IsShiftPressed and (Input.KeyCode.Name == 'Z') then
 				local NewScope = self.Scope.Parent or InitialScope
 				if GetCore().Security.IsLocationAllowed(NewScope, GetCore().Player) then
@@ -578,7 +889,7 @@ function TargetingModule:EnableScopeSelection()
 				end
 				return Enum.ContextActionResult.Sink
 
-			-- If Alt-Z is pressed, enter scope of current target
+				-- If Alt-Z is pressed, enter scope of current target
 			elseif Scoping and IsAltPressed and (Input.KeyCode.Name == 'Z') then
 				local Target, ScopeTarget = self:UpdateTarget(self.Scope, true)
 				if Target ~= ScopeTarget then
@@ -590,7 +901,7 @@ function TargetingModule:EnableScopeSelection()
 				end
 				return Enum.ContextActionResult.Sink
 
-			-- If Alt-F is pressed, stay in current scope
+				-- If Alt-F is pressed, stay in current scope
 			elseif Scoping and IsAltPressed and (Input.KeyCode.Name == 'F') then
 				Scoping = true
 				self.IsScopeLocked = true
@@ -598,7 +909,7 @@ function TargetingModule:EnableScopeSelection()
 				return Enum.ContextActionResult.Sink
 			end
 
-		-- Disable scoping on Alt release
+			-- Disable scoping on Alt release
 		elseif State.Name == 'End' then
 			if Scoping and (Input.KeyCode.Name:match 'Alt') then
 				if self.Scope == Scoping then
@@ -690,7 +1001,7 @@ function TargetingModule:EnableScopeAutoReset()
 					self:SetScope(Workspace, true)
 				end
 
-			-- Capture scope ancestry when it changes
+				-- Capture scope ancestry when it changes
 			else
 				LastScopeAncestry = {}
 				local Ancestor = Scope.Parent
