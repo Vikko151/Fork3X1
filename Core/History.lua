@@ -27,6 +27,13 @@ function History.Undo()
 
 	-- Get the history record, unapply it
 	local Record = History.Stack[History.Index];
+	
+	if not Record.Apply then 
+		History.Index = History.Index - 1;
+		History.Redo()
+		return
+	end
+	
 	Record:Unapply();
 
 	-- Update the index
@@ -50,6 +57,12 @@ function History.Redo()
 
 	-- Get the history record and apply it
 	local Record = History.Stack[History.Index];
+	
+	if not Record.Apply then 
+		History.Redo()
+		return
+	end
+	
 	Record:Apply();
 
 	-- Fire the Changed event
