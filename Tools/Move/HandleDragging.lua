@@ -7,7 +7,7 @@ local Security = Core.Security
 local BoundingBox = require(Tool.Core.BoundingBox)
 
 -- Libraries
-local Libraries = Tool:WaitForChild 'Libraries'
+local Libraries = Core.Libraries
 local MoveUtil = require(script.Parent:WaitForChild 'Util')
 
 -- Create class
@@ -62,8 +62,11 @@ function HandleDragging:AttachHandles(Part, Autofocus)
 		self.Handles:SetAdornee(Part)
 		return
 	end
-
+	
 	local AreaPermissions
+	local PreviousDistance
+	local LastToBoundingBox
+	
 	local function OnHandleDragStart()
 		-- Prepare for moving parts when the handle is clicked
 
@@ -76,16 +79,22 @@ function HandleDragging:AttachHandles(Part, Autofocus)
 		-- Freeze bounding box extents while dragging
 		if BoundingBox.GetBoundingBox() then
 			local InitialExtentsSize, InitialExtentsCFrame =
-				BoundingBox.CalculateExtents(Selection.Parts, BoundingBox.StaticExtents)
+				BoundingBox.CalculateExtents(Selection.Parts, Selection.Attachments, BoundingBox.StaticExtents)
 			self.InitialExtentsSize = InitialExtentsSize
 			self.InitialExtentsCFrame = InitialExtentsCFrame
-			BoundingBox.PauseMonitoring()
+			if self.Tool.Axes == 'Global' then
+				BoundingBox.PauseMonitoring()
+			elseif self.Tool.Axes == 'Last' and Selection.Focus then
+				LastToBoundingBox = Selection.Focus.CFrame:ToObjectSpace(InitialExtentsCFrame)
+			end 
 		end
 
 		-- Stop parts from moving, and capture the initial state of the parts
-		local InitialPartStates, InitialModelStates, InitialFocusCFrame = self.Tool:PrepareSelectionForDragging()
+		local InitialPartStates, InitialModelStates, InitialAttachmentsStates, InitialFocusCFrame = self.Tool:PrepareSelectionForDragging()
 		self.InitialPartStates = InitialPartStates
 		self.InitialModelStates = InitialModelStates
+		self.InitialAttachmentsStates = InitialAttachmentsStates
+		
 		self.InitialFocusCFrame = InitialFocusCFrame
 
 		-- Track the change
@@ -110,22 +119,28 @@ function HandleDragging:AttachHandles(Part, Autofocus)
 		Distance = MoveUtil.GetIncrementMultiple(Distance, self.Tool.Increment)
 
 		-- Move the parts along the selected axes by the calculated distance
-		self.Tool:MovePartsAlongAxesByFace(Face, Distance, self.InitialPartStates, self.InitialModelStates, self.InitialFocusCFrame)
+		self.Tool:MovePartsAlongAxesByFace(Face, Distance, self.InitialPartStates, self.InitialModelStates, self.InitialAttachmentsStates, self.InitialFocusCFrame)
 
 		-- Make sure we're not entering any unauthorized private areas
 		if Core.Mode == 'Tool' and Security.ArePartsViolatingAreas(Selection.Parts, Core.Player, false, AreaPermissions) then
 			local Part, InitialPartState = next(self.InitialPartStates)
 			Part.CFrame = InitialPartState.CFrame
-			MoveUtil.TranslatePartsRelativeToPart(Part, self.InitialPartStates, self.InitialModelStates)
-			Distance = 0
+			MoveUtil.TranslatePartsRelativeToPart(Part, self.InitialPartStates, self.InitialModelStates, self.InitialAttachmentsStates)
+			Distance = PreviousDistance
 		end
 
 		-- Signal out change in dragged distance
 		self.Tool.DragChanged:Fire(Distance)
 
-		-- Update bounding box if enabled in global axes movements
-		if self.Tool.Axes == 'Global' and BoundingBox.GetBoundingBox() then
+		-- Update bounding box if enabled
+		if self.Tool.Axes == 'Global' and BoundingBox.GetBoundingBox() and Distance ~= PreviousDistance then
 			BoundingBox.GetBoundingBox().CFrame = self.InitialExtentsCFrame + (AxisMultipliers[Face] * Distance)
+		elseif self.Tool.Axes == 'Last' and BoundingBox.GetBoundingBox() and Distance ~= PreviousDistance then
+			BoundingBox.GetBoundingBox().CFrame = Selection.Focus.CFrame * LastToBoundingBox
+		end
+		
+		if Distance ~= PreviousDistance then
+			PreviousDistance = Distance
 		end
 
 	end
@@ -139,11 +154,19 @@ function HandleDragging:AttachHandles(Part, Autofocus)
 		self.IsHandleDragging = false
 
 		-- Make joints, restore original anchor and collision states
+		local Count = 0
+		
 		for Part, State in pairs(self.InitialPartStates) do
+			Count += 1
+			
 			Part:MakeJoints()
 			Core.RestoreJoints(State.Joints)
 			Part.CanCollide = State.CanCollide
 			Part.Anchored = State.Anchored
+			
+			if Count % 500 == 0 then
+				task.wait()
+			end
 		end
 
 		-- Register change
@@ -155,10 +178,10 @@ function HandleDragging:AttachHandles(Part, Autofocus)
 	end
 
 	-- Create the handles
-	local Handles = require(Libraries:WaitForChild 'Handles')
+	local Handles = require(Libraries:WaitForChild(Core.Options.IgnoreHandlesWithCamera and not game:GetService("UserInputService").TouchEnabled and 'Handles' or 'OldHandles'))
 	self.Handles = Handles.new({
 		Color = self.Tool.Color.Color,
-		Parent = Core.UIContainer,
+		Parent = Core.UI,
 		Adornee = Part,
 		ObstacleBlacklist = { BoundingBox.GetBoundingBox() },
 		OnDragStart = OnHandleDragStart,
