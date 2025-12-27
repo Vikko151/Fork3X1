@@ -8,7 +8,7 @@ local ContextActionService = game:GetService 'ContextActionService'
 local UserInputService = game:GetService 'UserInputService'
 
 -- Libraries
-local Libraries = Tool:WaitForChild 'Libraries'
+local Libraries = Core.Libraries
 local Signal = require(Libraries:WaitForChild 'Signal')
 local Maid = require(Libraries:WaitForChild 'Maid')
 
@@ -25,6 +25,7 @@ local MoveTool = {
 	-- Default options
 	Increment = 1;
 	Axes = 'Global';
+	FocusWise = false;
 
 	-- Selection state
 	InitialState = nil;
@@ -44,7 +45,11 @@ local MoveTool = {
 	AxesChanged = Signal.new();
 }
 
-MoveTool.ManualText = [[<font face="GothamBlack" size="16">Move Tool  🛠</font>
+if table.find(Core.Options.ToolsBlacklist, MoveTool.Name) then
+	return MoveTool
+end
+
+MoveTool.ManualText = [[<font weight="900" size="24"><u><i>Move Tool  🛠</i></u></font>
 Allows you to move parts.<font size="12"><br /></font>
 <font size="12" color="rgb(150, 150, 150)"><b>Axes</b></font>
 This option lets you choose in which direction to move each part.<font size="6"><br /></font>
@@ -123,7 +128,7 @@ function MoveTool:SetAxes(AxisMode)
 	-- Disable any unnecessary bounding boxes
 	BoundingBox.ClearBoundingBox();
 
-	-- For global mode, use bounding box handles
+	-- For global mode, use bounding box handles if there are parts, or focused part if it's an attachment
 	if AxisMode == 'Global' then
 		BoundingBox.StartBoundingBox(function (BoundingBox)
 			self.HandleDragging:AttachHandles(BoundingBox)
@@ -131,38 +136,53 @@ function MoveTool:SetAxes(AxisMode)
 
 	-- For local mode, use focused part handles
 	elseif AxisMode == 'Local' then
+		BoundingBox.StartBoundingBox(function () end)
+		
 		self.HandleDragging:AttachHandles(Selection.Focus, true)
 
 	-- For last mode, use focused part handles
 	elseif AxisMode == 'Last' then
+		BoundingBox.StartBoundingBox(function () end)
+		
 		self.HandleDragging:AttachHandles(Selection.Focus, true)
 	end
 
 end
 
 --- Moves the given parts in `InitialStates`, along the given axis mode, in the given face direction, by the given distance.
-function MoveTool:MovePartsAlongAxesByFace(Face, Distance, InitialPartStates, InitialModelStates, InitialFocusCFrame)
+function MoveTool:MovePartsAlongAxesByFace(Face, Distance, InitialPartStates, InitialModelStates, InitialAttachmentsStates, InitialFocusCFrame)
 
 	-- Calculate the shift along the direction of the face
 	local Shift = Vector3.FromNormalId(Face) * Distance
-
+	
+	local Parts = {}
+	local PartsCFrames = {}
+	
 	-- Move along global axes
 	if self.Axes == 'Global' then
 		for Part, InitialState in pairs(InitialPartStates) do
-			Part.CFrame = InitialState.CFrame + Shift
+			table.insert(Parts, Part)
+			table.insert(PartsCFrames, InitialState.CFrame + Shift)
 		end
 		for Model, InitialState in pairs(InitialModelStates) do
 			Model.WorldPivot = InitialState.Pivot + Shift
+		end
+		for Attachment, InitialState in pairs(InitialAttachmentsStates) do
+			Attachment.WorldCFrame = InitialState.WorldCFrame + Shift
 		end
 
 	-- Move along individual items' axes
 	elseif self.Axes == 'Local' then
 		for Part, InitialState in pairs(InitialPartStates) do
-			Part.CFrame = InitialState.CFrame * CFrame.new(Shift)
+			table.insert(Parts, Part)
+			table.insert(PartsCFrames, InitialState.CFrame * CFrame.new(Shift))
 		end
-		-- for Model, InitialState in pairs(InitialModelStates) do
-		-- 	Model.WorldPivot = InitialState.Pivot * CFrame.new(Shift)
-		-- end
+		for Attachment, InitialState in pairs(InitialAttachmentsStates) do
+			Attachment.WorldCFrame = InitialState.WorldCFrame * CFrame.new(Shift)
+		end
+		for Model, InitialState in pairs(InitialModelStates) do
+		 	Model.WorldPivot = InitialState.Pivot * CFrame.new(Shift)
+		end
 
 	-- Move along focused item's axes
 	elseif self.Axes == 'Last' then
@@ -172,15 +192,22 @@ function MoveTool:MovePartsAlongAxesByFace(Face, Distance, InitialPartStates, In
 
 		-- Move parts based on initial offset from focus
 		for Part, InitialState in pairs(InitialPartStates) do
-			local FocusOffset = InitialFocusCFrame:toObjectSpace(InitialState.CFrame)
-			Part.CFrame = FocusCFrame * FocusOffset
+			local FocusOffset = InitialFocusCFrame:Inverse() * InitialState.CFrame
+			table.insert(Parts, Part)
+			table.insert(PartsCFrames, FocusCFrame * FocusOffset)
 		end
 		for Model, InitialState in pairs(InitialModelStates) do
-			local FocusOffset = InitialFocusCFrame:ToObjectSpace(InitialState.Pivot)
+			local FocusOffset = InitialFocusCFrame:Inverse() * InitialState.Pivot
 			Model.WorldPivot = FocusCFrame * FocusOffset
+		end
+		for Attachment, InitialState in pairs(InitialAttachmentsStates) do
+			local FocusOffset = InitialFocusCFrame:Inverse() * InitialState.WorldCFrame
+			Attachment.WorldCFrame = FocusCFrame * FocusOffset
 		end
 
 	end
+	
+	game.Workspace:BulkMoveTo(Parts, PartsCFrames)
 
 end
 
@@ -318,17 +345,75 @@ function MoveTool:SetAxisPosition(Axis, Position)
 	self:TrackChange()
 
 	-- Prepare parts to be moved
-	local InitialPartStates = self:PrepareSelectionForDragging()
-
+	local InitialPartStates, _, InitialAttachmentStates  = self:PrepareSelectionForDragging()
+	
+	local FocusedObjectPosition
+	local NewPosition
+	
+	if self.FocusWise == true and self.Axes ~= "Local" then
+		local FocusedObject = self.Axes == "Global" and BoundingBox.GetBoundingBox() or Selection.Focus
+		
+		-- Calculate our focused object's new CFrame
+		if FocusedObject:IsA("BasePart") then
+			FocusedObjectPosition = FocusedObject.Position
+			
+			NewPosition = vector.create(
+				Axis == 'X' and Position or FocusedObject.Position.X,
+				Axis == 'Y' and Position or FocusedObject.Position.Y,
+				Axis == 'Z' and Position or FocusedObject.Position.Z
+			);
+		else
+			FocusedObjectPosition = FocusedObject.WorldPosition
+			
+			NewPosition = vector.create(
+				Axis == 'X' and Position or FocusedObject.WorldPosition.X,
+				Axis == 'Y' and Position or FocusedObject.WorldPosition.Y,
+				Axis == 'Z' and Position or FocusedObject.WorldPosition.Z
+			);
+		end
+		
+	end
+	
 	-- Update each part
-	for Part in pairs(InitialPartStates) do
+	for Part in InitialPartStates do
+		
+		if self.FocusWise == true and self.Axes ~= "Local" then
 
-		-- Set the part's new CFrame
-		Part.CFrame = CFrame.new(
-			Axis == 'X' and Position or Part.Position.X,
-			Axis == 'Y' and Position or Part.Position.Y,
-			Axis == 'Z' and Position or Part.Position.Z
-		) * (Part.CFrame - Part.CFrame.p);
+			-- Get the attachment's delta to the focused object
+			local PositionDelta = Part.Position - FocusedObjectPosition
+			
+			-- Apply the delta to the focused object's new position
+			Part.CFrame = CFrame.new(NewPosition + PositionDelta) * (Part.CFrame - Part.CFrame.p);
+		else
+			-- Set the part's new CFrame
+			Part.CFrame = CFrame.new(
+				Axis == 'X' and Position or Part.Position.X,
+				Axis == 'Y' and Position or Part.Position.Y,
+				Axis == 'Z' and Position or Part.Position.Z
+			) * (Part.CFrame - Part.CFrame.p);
+		end
+
+
+	end;
+	
+	-- Update each attachment
+	for Attachment in InitialAttachmentStates do
+
+		if self.FocusWise == true and self.Axes ~= "Local" then
+			-- Get the attachment's delta to the focused object
+			local PositionDelta = Attachment.WorldPosition - FocusedObjectPosition
+
+			-- Apply the delta to the focused object's new position
+			Attachment.WorldCFrame = CFrame.new(NewPosition + PositionDelta) * (Attachment.WorldCFrame - Attachment.WorldCFrame.p);
+		else
+			-- Set the part's new CFrame
+			Attachment.WorldCFrame = CFrame.new(
+				Axis == 'X' and Position or Attachment.WorldPosition.X,
+				Axis == 'Y' and Position or Attachment.WorldPosition.Y,
+				Axis == 'Z' and Position or Attachment.WorldPosition.Z
+			) * (Attachment.WorldCFrame - Attachment.WorldCFrame.p);
+		end
+
 
 	end;
 
@@ -371,10 +456,10 @@ function MoveTool:NudgeSelectionByFace(Face)
 	self:TrackChange()
 
 	-- Prepare parts to be moved
-	local InitialPartStates, InitialModelStates, InitialFocusCFrame = self:PrepareSelectionForDragging()
+	local InitialPartStates, InitialModelStates, InitialAttachmentsStates, InitialFocusCFrame = self:PrepareSelectionForDragging()
 
 	-- Perform the movement
-	self:MovePartsAlongAxesByFace(Face, NudgeAmount, InitialPartStates, InitialModelStates, InitialFocusCFrame)
+	self:MovePartsAlongAxesByFace(Face, NudgeAmount, InitialPartStates, InitialModelStates, InitialAttachmentsStates, InitialFocusCFrame)
 
 	-- Indicate updated drag distance
 	self.DragChanged:Fire(NudgeAmount)
@@ -408,6 +493,7 @@ function MoveTool:TrackChange()
 	self.HistoryRecord = {
 		Parts = Support.CloneTable(Selection.Parts);
 		Models = Support.CloneTable(Selection.Models);
+		Attachments = Support.CloneTable(Selection.Attachments);
 		BeforeCFrame = {};
 		AfterCFrame = {};
 		Selection = Selection.Items;
@@ -424,6 +510,12 @@ function MoveTool:TrackChange()
 				table.insert(Changes, {
 					Part = Part;
 					CFrame = Record.BeforeCFrame[Part];
+				})
+			end
+			for _, Attachment in ipairs(Record.Attachments) do
+				table.insert(Changes, {
+					Attachment = Attachment;
+					WorldCFrame = Record.BeforeCFrame[Attachment];
 				})
 			end
 			for _, Model in ipairs(Record.Models) do
@@ -452,6 +544,12 @@ function MoveTool:TrackChange()
 					CFrame = Record.AfterCFrame[Part];
 				})
 			end
+			for _, Attachment in ipairs(Record.Attachments) do
+				table.insert(Changes, {
+					Attachment = Attachment;
+					WorldCFrame = Record.AfterCFrame[Attachment];
+				})
+			end
 			for _, Model in ipairs(Record.Models) do
 				table.insert(Changes, {
 					Model = Model;
@@ -470,11 +568,12 @@ function MoveTool:TrackChange()
 	for _, Part in pairs(self.HistoryRecord.Parts) do
 		self.HistoryRecord.BeforeCFrame[Part] = Part.CFrame
 	end
-	pcall(function ()
-		for _, Model in ipairs(self.HistoryRecord.Models) do
-			self.HistoryRecord.BeforeCFrame[Model] = Model:GetPivot()
-		end
-	end)
+	for _, Attachment in pairs(self.HistoryRecord.Attachments) do
+		self.HistoryRecord.BeforeCFrame[Attachment] = Attachment.WorldCFrame
+	end
+	for _, Model in ipairs(self.HistoryRecord.Models) do
+		self.HistoryRecord.BeforeCFrame[Model] = Model:GetPivot()
+	end
 
 end
 
@@ -495,16 +594,20 @@ function MoveTool:RegisterChange()
 			CFrame = Part.CFrame;
 		})
 	end;
-	pcall(function ()
-		for _, Model in pairs(self.HistoryRecord.Models) do
-			self.HistoryRecord.AfterCFrame[Model] = Model:GetPivot()
-			table.insert(Changes, {
-				Model = Model;
-				Pivot = Model:GetPivot();
-			})
-		end
-	end)
-
+	for _, Attachment in pairs(self.HistoryRecord.Attachments) do
+		self.HistoryRecord.AfterCFrame[Attachment] = Attachment.WorldCFrame
+		table.insert(Changes, {
+			Attachment = Attachment;
+			WorldCFrame = Attachment.WorldCFrame;
+		})
+	end;
+	for _, Model in pairs(self.HistoryRecord.Models) do
+		self.HistoryRecord.AfterCFrame[Model] = Model:GetPivot()
+		table.insert(Changes, {
+			Model = Model;
+			Pivot = Model:GetPivot();
+		})
+	end
 	-- Send the change to the server
 	Core.SyncAPI:Invoke('SyncMove', Changes);
 
@@ -514,16 +617,18 @@ function MoveTool:RegisterChange()
 
 end
 
+
+
 --- Prepares selection for dragging, and returns the initial state of the selection.
 function MoveTool:PrepareSelectionForDragging()
 	local InitialPartStates = {}
 	local InitialModelStates = {}
+	local InitialAttachmentsStates = {}
 
 	-- Get index of parts
 	local PartIndex = Support.FlipTable(Selection.Parts)
-
-	-- Stop parts from moving, and capture the initial state of the parts
-	for _, Part in pairs(Selection.Parts) do
+	
+	local function SetUpPart(Part)
 		InitialPartStates[Part] = {
 			Anchored = Part.Anchored;
 			CanCollide = Part.CanCollide;
@@ -533,18 +638,29 @@ function MoveTool:PrepareSelectionForDragging()
 		Part.CanCollide = false;
 		InitialPartStates[Part].Joints = Core.PreserveJoints(Part, PartIndex)
 		Part:BreakJoints();
-		Part.Velocity = Vector3.new();
-		Part.RotVelocity = Vector3.new();
+		Part.Velocity = vector.zero;
+		Part.RotVelocity = vector.zero;
+	end
+
+	-- Stop parts from moving, and capture the initial state of the parts
+	for _, Part in Selection.Parts do
+		SetUpPart(Part)
 	end;
 
 	-- Get initial model states (temporarily pcalled due to pivot API being in beta)
-	pcall(function ()
-		for _, Model in ipairs(Selection.Models) do
-			InitialModelStates[Model] = {
-				Pivot = Model:GetPivot();
-			}
-		end
-	end)
+	for _, Model in Selection.Models do
+			
+		InitialModelStates[Model] = {
+			Pivot = Model:GetPivot();
+		}
+	end
+	
+	for _, Attachment in ipairs(Selection.Attachments) do
+		InitialAttachmentsStates[Attachment] = {
+			WorldCFrame = Attachment.WorldCFrame;
+		}
+	end
+
 
 	-- Get initial state of focused item
 	local InitialFocusCFrame
@@ -553,14 +669,13 @@ function MoveTool:PrepareSelectionForDragging()
 		InitialFocusCFrame = nil
 	elseif Focus:IsA 'BasePart' then
 		InitialFocusCFrame = Focus.CFrame
+	elseif Focus:IsA 'Attachment' then
+		InitialFocusCFrame = Focus.WorldCFrame
 	elseif Focus:IsA 'Model' then
-		InitialFocusCFrame = Focus:GetModelCFrame()
-		pcall(function ()
-			InitialFocusCFrame = Focus:GetPivot()
-		end)
+		InitialFocusCFrame = Focus:GetPivot()
 	end
 
-	return InitialPartStates, InitialModelStates, InitialFocusCFrame
+	return InitialPartStates, InitialModelStates, InitialAttachmentsStates, InitialFocusCFrame
 end;
 
 -- Return the tool
