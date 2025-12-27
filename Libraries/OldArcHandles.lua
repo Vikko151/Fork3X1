@@ -137,7 +137,6 @@ function ArcHandles:CreateHandles(Options)
 		Handle.ImageColor3 = AxisColor
 		Handle.ZIndex = 1
 		Handle.Visible = false
-		Handle.Interactable = false
 
 		-- Create handle dot
 		local HandleDot = Handle:Clone()
@@ -541,5 +540,6 @@ function ArcHandles:Destroy()
 	self.Maid:Destroy()
 
 end
+
 
 return ArcHandles
