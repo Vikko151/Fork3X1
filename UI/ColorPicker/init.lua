@@ -1,6 +1,7 @@
 local Root = script:FindFirstAncestorWhichIsA('Tool')
 local Libraries = Root:WaitForChild('Libraries')
 local Vendor = Root:WaitForChild('Vendor')
+local Sounds = Root:WaitForChild("Sounds")
 
 -- Libraries
 local Roact = require(Vendor:WaitForChild('Roact'))
@@ -8,14 +9,21 @@ local Maid = require(Libraries:WaitForChild('Maid'))
 local fastSpawn = require(Libraries:WaitForChild('fastSpawn'))
 
 -- Roact
-local new = Roact.createElement
+local new = function(Type, props, ...)
+	props["RBXTAG_Native"] = true
+	
+	return Roact.createElement(Type, props, ...)
+end
 local Slider = require(script:WaitForChild('Slider'))
 
 -- Create component
 local ColorPicker = Roact.PureComponent:extend(script.Name)
 
 function ColorPicker:init()
-    self.Maid = Maid.new()
+	self.Maid = Maid.new()
+	if typeof(self.props.InitialColor) == "ColorSequence" then
+		self.props.InitialColor = self.props.InitialColor.Keypoints[1].Value
+	end
     local InitialHue,
           InitialSaturation,
           InitialBrightness = (self.props.InitialColor or Color3.fromHSV(0, 0.5, 1)):ToHSV()
@@ -84,27 +92,30 @@ function ColorPicker:render()
             Active = true;
             Draggable = true;
             ZIndex = 0;
-            AnchorPoint = Vector2.new(1, 0.5);
+        --    AnchorPoint = Vector2.new(1, 0.5);
             Position = self.DefaultPosition or UDim2.new(1, -110, 0.5, 0);
-            BackgroundTransparency = 1;
-            Size = UDim2.fromOffset(240, 0);
+       	--    BackgroundTransparency = 1;
+        --    Size = UDim2.fromOffset(240, 0);
             [Roact.Change.Position] = function (rbx)
                 ColorPicker.DefaultPosition = rbx.Position
-            end;
-        }, {
+			end;
+			RBXTAG_ColorPicker = true
+		}, {
+			--[[
             Layout = new('UIListLayout', {
                 FillDirection = Enum.FillDirection.Vertical;
                 SortOrder = Enum.SortOrder.LayoutOrder;
                 [Roact.Change.AbsoluteContentSize] = function (rbx)
                     rbx.Parent.Size = UDim2.fromOffset(240, rbx.AbsoluteContentSize.Y)
                 end;
-            });
+            });]]
             Picker = new('Frame', {
-                BackgroundTransparency = 1;
-                BorderSizePixel = 0;
-                Size = UDim2.new(1, 0, 0, 0);
-                LayoutOrder = 0;
-            }, {
+              --  BackgroundTransparency = 1;
+              --  BorderSizePixel = 0;
+               -- Size = UDim2.new(1, 0, 0, 0);
+				-- LayoutOrder = 0;
+			}, {
+				--[[
                 Layout = new('UIListLayout', {
                     Padding = UDim.new(0, 10);
                     FillDirection = Enum.FillDirection.Horizontal;
@@ -112,26 +123,28 @@ function ColorPicker:render()
                     [Roact.Change.AbsoluteContentSize] = function (rbx)
                         rbx.Parent.Size = UDim2.new(1, 0, 0, rbx.AbsoluteContentSize.Y)
                     end;
-                });
+                });]]
                 Color = new('Frame', {
-                    BorderSizePixel = 0;
-                    Size = UDim2.new(0.25, 0, 1, 0);
+               --     BorderSizePixel = 0;
+                --    Size = UDim2.new(0.25, 0, 1, 0);
                     BackgroundColor3 = self.HSV:map(function (HSV)
                         return Color3.fromHSV(HSV.H, HSV.S, HSV.V)
                     end);
-                }, {
+				}, {
+					--[[
                     Corners = new('UICorner', {
                         CornerRadius = UDim.new(0, 4);
                     });
                     AspectRatio = new('UIAspectRatioConstraint', {
                         AspectRatio = 1;
-                    });
+					});]]
                 });
                 Sliders = new('Frame', {
-                    Position = UDim2.new(0.25, 5, 0, 0);
-                    Size = UDim2.new(0.75, 0, 0, 0);
-                    BackgroundTransparency = 1;
-                }, {
+                --    Position = UDim2.new(0.25, 5, 0, 0);
+                --    Size = UDim2.new(0.75, 0, 0, 0);
+                --    BackgroundTransparency = 1;
+				}, {
+					--[[
                     Layout = new('UIListLayout', {
                         Padding = UDim.new(0, 10);
                         FillDirection = Enum.FillDirection.Vertical;
@@ -141,10 +154,10 @@ function ColorPicker:render()
                         [Roact.Change.AbsoluteContentSize] = function (rbx)
                             rbx.Parent.Size = UDim2.new(0.75, 0, 0, rbx.AbsoluteContentSize.Y)
                         end;
-                    });
+                    });]]
                     HueSlider = new(Slider, {
-                        Size = UDim2.new(1, 0, 0, 10);
-                        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+                    --    Size = UDim2.new(1, 0, 0, 10);
+                    --    BackgroundColor3 = Color3.fromRGB(255, 255, 255);
                         LayoutOrder = 0;
                         Value = self.HSV:map(function (HSV)
                             return HSV.H
@@ -173,8 +186,8 @@ function ColorPicker:render()
                         });
                     });
                     SaturationSlider = new(Slider, {
-                        Size = UDim2.new(1, 0, 0, 10);
-                        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+                    --    Size = UDim2.new(1, 0, 0, 10);
+                    --    BackgroundColor3 = Color3.fromRGB(255, 255, 255);
                         LayoutOrder = 1;
                         Value = self.HSV:map(function (HSV)
                             return HSV.S
@@ -198,8 +211,8 @@ function ColorPicker:render()
                         });
                     });
                     BrightnessSlider = new(Slider, {
-                        Size = UDim2.new(1, 0, 0, 10);
-                        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+                    --    Size = UDim2.new(1, 0, 0, 10);
+                    --    BackgroundColor3 = Color3.fromRGB(255, 255, 255);
                         LayoutOrder = 2;
                         Value = self.HSV:map(function (HSV)
                             return HSV.V
@@ -225,38 +238,38 @@ function ColorPicker:render()
                 });
             });
             Bottom = new('Frame', {
-                BackgroundTransparency = 1;
-                BorderSizePixel = 0;
-                Size = UDim2.new(1, 0, 0, 34);
+            --    BackgroundTransparency = 1;
+            --    BorderSizePixel = 0;
+            --    Size = UDim2.new(1, 0, 0, 34);
                 LayoutOrder = 1;
             }, {
                 HSVLabel = new('TextLabel', {
-                    BackgroundTransparency = 1;
-                    Position = UDim2.new(0, 0, 0, 7);
-                    Font = Enum.Font.GothamBlack;
-                    Text = 'HSV: ';
-                    TextSize = 11;
-                    TextColor3 = Color3.fromRGB(255, 255, 255);
-                    TextStrokeTransparency = 0.95;
+            --        BackgroundTransparency = 1;
+                   Position = UDim2.new(0, 0, 0, 7);
+            --        Font = Enum.Font.GothamBlack;
+           	       Text = 'HSV: ';
+            --        TextSize = 11;
+            --        TextColor3 = Color3.fromRGB(255, 255, 255);
+            --        TextStrokeTransparency = 0.95;
                     [Roact.Change.TextBounds] = function (rbx)
                         rbx.Size = UDim2.fromOffset(rbx.TextBounds.X, rbx.TextBounds.Y)
                     end;
                 }, {
                     HSVInput = new('TextBox', {
-                        BackgroundTransparency = 1;
-                        Position = UDim2.new(1, 0, 0, 0);
-                        ClearTextOnFocus = false;
-                        Font = Enum.Font.Gotham;
+                    --    BackgroundTransparency = 1;
+                    --    Position = UDim2.new(1, 0, 0, 0);
+                    --    ClearTextOnFocus = false;
+                   --     Font = Enum.Font.Gotham;
                         Text = self.HSV:map(function (HSV)
                             local Hue = tostring(math.floor(HSV.H * 360)) .. '°'
                             local Saturation = tostring(math.floor(HSV.S * 100)) .. '%'
                             local Brightness = tostring(math.floor(HSV.V * 100)) .. '%'
                             return Hue .. ', ' .. Saturation .. ', ' .. Brightness
                         end);
-                        TextSize = 11;
-                        TextColor3 = Color3.fromRGB(255, 255, 255);
-                        TextStrokeTransparency = 0.95;
-                        TextXAlignment = Enum.TextXAlignment.Left;
+                    --    TextSize = 11;
+                     --   TextColor3 = Color3.fromRGB(255, 255, 255);
+                    --    TextStrokeTransparency = 0.95;
+                    --    TextXAlignment = Enum.TextXAlignment.Left;
                         [Roact.Change.TextBounds] = function (rbx)
                             rbx.Size = UDim2.fromOffset(rbx.TextBounds.X, rbx.TextBounds.Y)
                         end;
@@ -273,22 +286,22 @@ function ColorPicker:render()
                     });
                 });
                 RGBLabel = new('TextLabel', {
-                    BackgroundTransparency = 1;
-                    Position = UDim2.new(0, 0, 0, 7 + 11 + 4);
-                    Font = Enum.Font.GothamBlack;
+            --        BackgroundTransparency = 1;
+            	    Position = UDim2.new(0, 0, 0, 7 + 11 + 4);
+            --        Font = Enum.Font.GothamBlack;
                     Text = 'RGB: ';
-                    TextSize = 11;
-                    TextColor3 = Color3.fromRGB(255, 255, 255);
-                    TextStrokeTransparency = 0.95;
+            --        TextSize = 11;
+            --        TextColor3 = Color3.fromRGB(255, 255, 255);
+            --        TextStrokeTransparency = 0.95;
                     [Roact.Change.TextBounds] = function (rbx)
                         rbx.Size = UDim2.fromOffset(rbx.TextBounds.X, rbx.TextBounds.Y)
                     end;
                 }, {
                     RGBInput = new('TextBox', {
-                        BackgroundTransparency = 1;
-                        Position = UDim2.new(1, 0, 0, 0);
+                    --    BackgroundTransparency = 1;
+                    --    Position = UDim2.new(1, 0, 0, 0);
                         ClearTextOnFocus = false;
-                        Font = Enum.Font.Gotham;
+                    --    Font = Enum.Font.Gotham;
                         Text = self.HSV:map(function (HSV)
                             local Color = Color3.fromHSV(HSV.H, HSV.S, HSV.V)
                             local R = tostring(math.round(Color.R * 255))
@@ -296,10 +309,10 @@ function ColorPicker:render()
                             local B = tostring(math.round(Color.B * 255))
                             return R .. ', ' .. G .. ', ' .. B
                         end);
-                        TextSize = 11;
-                        TextColor3 = Color3.fromRGB(255, 255, 255);
-                        TextStrokeTransparency = 0.95;
-                        TextXAlignment = Enum.TextXAlignment.Left;
+                    --    TextSize = 11;
+                    --   TextColor3 = Color3.fromRGB(255, 255, 255);
+                     --   TextStrokeTransparency = 0.95;
+                     --   TextXAlignment = Enum.TextXAlignment.Left;
                         [Roact.Change.TextBounds] = function (rbx)
                             rbx.Size = UDim2.fromOffset(rbx.TextBounds.X, rbx.TextBounds.Y)
                         end;
@@ -323,48 +336,73 @@ function ColorPicker:render()
                 });
 
                 ConfirmButton = new('ImageButton', {
-                    BackgroundTransparency = 1;
-                    Size = UDim2.new(0, 23, 0, 23);
-                    Position = UDim2.new(1, 0, 1, 0);
+				--	BackgroundTransparency = 1;
+               	    Size = UDim2.new(0, 23, 0, 23);
+              	    Position = UDim2.new(1, 0, 1, 0);
                     AnchorPoint = Vector2.new(1, 1);
-                    Image = 'rbxassetid://2132729935';
-                    ScaleType = Enum.ScaleType.Slice;
-                    SliceCenter = Rect.new(8, 8, 34, 34);
-                    SliceScale = 0.5;
+				--	Image = 'rbxassetid://2132729935';
+				--	ImageColor3 = self.state.ConfirmHovered and Color3.fromRGB(200, 200, 200) or Color3.fromRGB(255, 255, 255);
+                --    ScaleType = Enum.ScaleType.Slice;
+                --    SliceCenter = Rect.new(8, 8, 34, 34);
+                --    SliceScale = 0.5;
                     [Roact.Event.Activated] = function (rbx)
+						Sounds:WaitForChild("Press"):Play()
                         self:Finish()
                     end;
+					[Roact.Event.MouseEnter] = function ()
+						Sounds:WaitForChild("Hover"):Play()
+						self:setState({
+							ConfirmHovered = true;
+						})
+					end;
+					[Roact.Event.MouseLeave] = function ()
+						self:setState({
+							ConfirmHovered = false;
+						})
+					end;
                 }, {
                     Label = new('TextLabel', {
-                        BackgroundTransparency = 1;
-                        Size = UDim2.new(1, 0, 1, 0);
-                        Text = '✔';
-                        Font = Enum.Font.GothamSemibold;
-                        TextSize = 12;
-                        TextColor3 = Color3.fromRGB(0, 0, 0);
+                    --    BackgroundTransparency = 1;
+                    --   Size = UDim2.new(1, 0, 1, 0);
+                       Text = '✔';
+                    --    Font = Enum.Font.GothamSemibold;
+                    --    TextSize = 12;
+                    --    TextColor3 = Color3.fromRGB(0, 0, 0);
                     });
                 });
                 CancelButton = new('ImageButton', {
-                    BackgroundTransparency = 1;
-                    Size = UDim2.new(0, 25, 0, 23);
-                    Position = UDim2.new(1, -30, 1, 0);
-                    AnchorPoint = Vector2.new(1, 1);
-                    Image = 'rbxassetid://2218340938';
-                    ScaleType = Enum.ScaleType.Slice;
-                    SliceCenter = Rect.new(8, 8, 34, 34);
-                    SliceScale = 0.5;
-                    [Roact.Event.Activated] = function (rbx)
+                --    BackgroundTransparency = self.state.CancelHovered and 0.7 or 1;
+                      Size = UDim2.new(0, 25, 0, 23);
+                	  Position = UDim2.new(1, -30, 1, 0);
+                      AnchorPoint = Vector2.new(1, 1);
+                --    Image = 'rbxassetid://2218340938';
+                --    ScaleType = Enum.ScaleType.Slice;
+                --    SliceCenter = Rect.new(8, 8, 34, 34);
+                --    SliceScale = 0.5;
+					[Roact.Event.Activated] = function (rbx)
+						Sounds:WaitForChild("Press"):Play()
                         self:Cancel()
-                    end;
+					end;
+					[Roact.Event.MouseEnter] = function ()
+						Sounds:WaitForChild("Hover"):Play()
+						self:setState({
+							CancelHovered = true;
+						})
+					end;
+					[Roact.Event.MouseLeave] = function ()
+						self:setState({
+							CancelHovered = false;
+						})
+					end;
                 }, {
                     Label = new('TextLabel', {
-                        BackgroundTransparency = 1;
-                        Size = UDim2.new(1, 0, 1, 0);
+                    --    BackgroundTransparency = 1;
+                    --    Size = UDim2.new(1, 0, 1, 0);
                         Text = 'Cancel';
-                        Font = Enum.Font.GothamSemibold;
-                        TextColor3 = Color3.fromRGB(255, 255, 255);
-                        TextSize = 12;
-                        TextStrokeTransparency = 0.95;
+                    --    Font = Enum.Font.GothamSemibold;
+                    --    TextColor3 = Color3.fromRGB(255, 255, 255);
+                    --    TextSize = 12;
+                    --    TextStrokeTransparency = 0.95;
                         [Roact.Change.TextBounds] = function (rbx)
                             rbx.Parent.Size = UDim2.new(0, rbx.TextBounds.X + 10, 0, 23);
                         end;
