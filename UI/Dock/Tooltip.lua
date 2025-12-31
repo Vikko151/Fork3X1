@@ -4,7 +4,11 @@ local TextService = game:GetService('TextService')
 
 -- Libraries
 local Roact = require(Vendor:WaitForChild('Roact'))
-local new = Roact.createElement
+local new = function(Type, props, ...)
+	props["RBXTAG_Native"] = true
+
+	return Roact.createElement(Type, props, ...)
+end
 
 -- Create component
 local Tooltip = Roact.PureComponent:extend(script.Name)
@@ -31,40 +35,43 @@ end
 
 function Tooltip:render()
     return new('Frame', {
-        AnchorPoint = Vector2.new(0.5, 0);
-        BackgroundColor3 = Color3.fromRGB(58, 58, 58);
-        BackgroundTransparency = 0;
-        BorderSizePixel = 0;
-        Position = UDim2.new(0.5, 0, 1, 2);
+    --    AnchorPoint = Vector2.new(0.5, 0);
+    --    BackgroundColor3 = Color3.fromRGB(0, 0, 0);
+    --    BackgroundTransparency = 0;
+    --    BorderSizePixel = 0;
+    --    Position = UDim2.new(0.5, 0, 1, -1);
         Size = UDim2.fromOffset(self.TextBounds.X + 20, self.TextBounds.Y + 8);
         ZIndex = 2;
-        Visible = self.props.IsVisible;
-    }, {
+		Visible = self.props.IsVisible;
+		Rotation = 0.2;
+		RBXTAG_ToolTip = true;
+	}, {
+		--[[
         Corners = new('UICorner', {
             CornerRadius = UDim.new(0, 3);
-        });
+        });]]
         Arrow = new('Frame', {
-            AnchorPoint = Vector2.new(0.5, 0.5);
-            BackgroundColor3 = Color3.fromRGB(58, 58, 58);
-            BackgroundTransparency = 0;
-            BorderSizePixel = 0;
-            Position = UDim2.new(0.5, 0, 0, 0);
-            Size = UDim2.new(0, 6, 0, 6);
-            ZIndex = 2;
+        --    AnchorPoint = Vector2.new(0.5, 0.5);
+        --    BackgroundColor3 = Color3.fromRGB(0, 0, 0);
+        --    BackgroundTransparency = 0;
+        --    BorderSizePixel = 0;
+        --    Position = UDim2.new(0.5, 0, 0, 0);
+        --    Size = UDim2.new(0, 6, 0, 6);
+            ZIndex = 3;
         });
         Text = new('TextLabel', {
-            BackgroundTransparency = 1;
-            Size = UDim2.new(1, 0, 1, 0);
-            ZIndex = 2;
-            Font = Enum.Font.Gotham;
+        --    BackgroundTransparency = 1;
+        --    Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 3;
+        --    Font = Enum.Font.Gotham;
             RichText = true;
-            Text = self.props.Text;
-            TextColor3 = Color3.fromRGB(255, 255, 255);
-            TextSize = 10;
-            TextXAlignment = Enum.TextXAlignment.Center;
-            TextYAlignment = Enum.TextYAlignment.Center;
+			Text = self.props.Text;
+        --    TextColor3 = Color3.fromRGB(255, 255, 255);
+        --    TextSize = 10;
+        --    TextXAlignment = Enum.TextXAlignment.Center;
+        --    TextYAlignment = Enum.TextYAlignment.Center;
         });
-    })
+	},  script.Name, self)
 end
 
 return Tooltip
