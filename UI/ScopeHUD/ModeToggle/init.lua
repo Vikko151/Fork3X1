@@ -7,7 +7,13 @@ local Roact = require(Vendor:WaitForChild 'Roact')
 local Maid = require(Libraries:WaitForChild 'Maid')
 
 -- Roact
-local new = Roact.createElement
+local new = function(Type, props, ...)
+	if props["RBXTAG_Native"] == nil then
+		props["RBXTAG_Native"] = true
+	end
+
+	return Roact.createElement(Type, props, ...)
+end
 local Tooltip = require(script:WaitForChild 'Tooltip')
 
 local ModeToggle = Roact.PureComponent:extend 'ModeToggle'
@@ -68,28 +74,29 @@ function ModeToggle:render()
                                     (self.state.TargetingMode == 'Direct' and 14)
     return Roact.createFragment({
         ModeToggle = new('ImageButton', {
-            BackgroundTransparency = 1;
-            Image = 'rbxassetid://4445959523';
-            ImageTransparency = 1 - (self.state.IsHovering and 0.5 or 0.2);
-            ScaleType = Enum.ScaleType.Slice;
-            SliceCenter = Rect.new(4, 4, 12, 12);
-            ImageColor3 = Color3.fromRGB(131, 131, 131);
+--            BackgroundTransparency = 1;
+--            Image = 'rbxassetid://4445959523';
+--            ImageTransparency = 1 - (self.state.IsHovering and 0.5 or 0.2);
+--            ScaleType = Enum.ScaleType.Slice;
+--            SliceCenter = Rect.new(4, 4, 12, 12);
+ --           ImageColor3 = Color3.fromRGB(131, 131, 131);
             Size = UDim2.new(0, 36/2, 0, 36/2);
-            LayoutOrder = 0;
-            [Roact.Event.Activated] = self.OnActivated;
+			LayoutOrder = 0;
+			RBXTAG_Native = false;
+			[Roact.Event.Activated] = self.OnActivated;
             [Roact.Event.InputBegan] = self.OnInputBegin;
             [Roact.Event.InputEnded] = self.OnInputEnd;
         },
         {
             Icon = new('ImageLabel', {
-                BackgroundTransparency = 1;
-                Image = 'rbxassetid://4463020853';
-                ImageTransparency = 1 - (self.state.IsHovering and 1 or 0.5);
+            --    BackgroundTransparency = 1;
+            --    Image = 'rbxassetid://4463020853';
+            --    ImageTransparency = 1 - (self.state.IsHovering and 1 or 0.5);
                 AnchorPoint = Vector2.new(0.5, 0.5);
                 Position = UDim2.new(0.5, 0, 0.5, 0);
                 Size = UDim2.new(0, 28/2, 0, 28/2);
                 ImageRectOffset = Vector2.new(IconSpritesheetPosition, 0);
-                ImageRectSize = Vector2.new(14, 14);
+            --    ImageRectSize = Vector2.new(14, 14);
             });
             Tooltip = new(Tooltip, {
                 Visible = self.state.IsHovering;
@@ -98,7 +105,7 @@ function ModeToggle:render()
         });
         ModeToggleSpacer = new('Frame', {
             BackgroundTransparency = 1;
-            Size = UDim2.new(0, 0, 1, 0);
+        --    Size = UDim2.new(0, 0, 1, 0);
             LayoutOrder = 1;
         });
     })
