@@ -8,11 +8,18 @@ local Roact = require(Vendor:WaitForChild 'Roact')
 local Maid = require(Libraries:WaitForChild 'Maid')
 
 -- Roact
-local new = Roact.createElement
+local new = function(Type, props, ...)
+	props["RBXTAG_Native"] = true
+
+	return Roact.createElement(Type, props, ...)
+end
+
 local HotkeyTooltip = require(script.Parent:WaitForChild 'HotkeyTooltip')
 
 -- Create component
 local ScopeHierarchyItemButton = Roact.PureComponent:extend 'ScopeHierarchyItemButton'
+
+local ClassIconPositions, DefaultPosition
 
 --- Creates callbacks and sets up initial state.
 function ScopeHierarchyItemButton:init()
@@ -23,41 +30,24 @@ function ScopeHierarchyItemButton:init()
     --- Processes clicks, triggers scope change
     function self.OnClicked()
         self.props.SetScopeFromButton(self.props.Instance)
-    end
+	end
 
     -- Set initial state
     self:UpdateInstanceState()
 end
 
-local ClassIconPositions = {
-    Part = Vector2.new(2, 1);
-    MeshPart = Vector2.new(4, 8);
-    UnionOperation = Vector2.new(4, 8);
-    NegateOperation = Vector2.new(3, 8);
-    VehicleSeat = Vector2.new(6, 4);
-    Seat = Vector2.new(6, 4);
-    TrussPart = Vector2.new(2, 1);
-    CornerWedgePart = Vector2.new(2, 1);
-    WedgePart = Vector2.new(2, 1);
-    SpawnLocation = Vector2.new(6, 3);
-    Model = Vector2.new(3, 1);
-    Folder = Vector2.new(8, 8);
-    Tool = Vector2.new(8, 2);
-    Workspace = Vector2.new(10, 2);
-    Accessory = Vector2.new(3, 4);
-    Accoutrement = Vector2.new(3, 4);
-}
-
 --- Updates the current instance state.
 function ScopeHierarchyItemButton:UpdateInstanceState()
-    local NewName = self.props.Instance.Name
+
+	local NewName = self.props.Instance.Name
+--[[
     local MaxTextBounds = Vector2.new(math.huge, math.huge)
     local TextBounds = TextService:GetTextSize(NewName, 33/2, Enum.Font.SourceSans, MaxTextBounds)
-
+]]
     -- Update instance state
     self:setState({
         InstanceName = NewName;
-        InstanceNameLength = TextBounds.X;
+--        InstanceNameLength = TextBounds.X;
     })
 end
 
@@ -99,20 +89,43 @@ function ScopeHierarchyItemButton:didUpdate(previousProps, previousState)
 end
 
 function ScopeHierarchyItemButton:render()
+	
+	ClassIconPositions, DefaultPosition = self.props.Core.Options.GetClassIcons and self.props.Core.Options.GetClassIcons(self.props.Core.CurrentTheme) or {
+		Part = Vector2.new(2, 1),
+		MeshPart = Vector2.new(4, 8),
+		UnionOperation = Vector2.new(4, 8),
+		NegateOperation = Vector2.new(3, 8),
+		VehicleSeat = Vector2.new(6, 4),
+		Seat = Vector2.new(6, 4),
+		TrussPart = Vector2.new(2, 1),
+		CornerWedgePart = Vector2.new(2, 1),
+		WedgePart = Vector2.new(2, 1),
+		SpawnLocation = Vector2.new(6, 3),
+		Model = Vector2.new(3, 1),
+		Folder = Vector2.new(8, 8),
+		Tool = Vector2.new(8, 2),
+		Workspace = Vector2.new(10, 2),
+		Accessory = Vector2.new(3, 4),
+		Accoutrement = Vector2.new(3, 4),
+		Attachment = Vector2.new(2, 9)
+	}, Vector2.new()
+	
     local ClassName = self.props.Instance.ClassName
-    local IconPosition = ClassIconPositions[ClassName] or Vector2.new(1, 1)
+    local IconPosition = ClassIconPositions[ClassName] or DefaultPosition
     local ShouldDisplayArrow = (self.props.LayoutOrder ~= 2) or nil
 
     return new('ImageButton', {
-        BackgroundTransparency = 1;
-        ImageTransparency = 1;
+    --    BackgroundTransparency = 1;
+    --    ImageTransparency = 1;
         Size = self.ContainerSize;
         LayoutOrder = self.props.LayoutOrder;
         [Roact.Event.InputBegan] = self.OnInputBegin;
         [Roact.Event.InputEnded] = self.OnInputEnd;
-        [Roact.Event.Activated] = self.OnClicked;
+		[Roact.Event.Activated] = self.OnClicked;
+		AutomaticSize = Enum.AutomaticSize.X;
     },
-    {
+	{
+		
         Layout = new('UIListLayout', {
             [Roact.Ref] = self.LayoutRef;
             FillDirection = Enum.FillDirection.Horizontal;
@@ -125,66 +138,74 @@ function ScopeHierarchyItemButton:render()
         ArrowWrapper = ShouldDisplayArrow and new('Frame', {
             Size = UDim2.new(0, 38/2, 0, 38/2);
             BackgroundTransparency = 1;
-            LayoutOrder = 0;
+			LayoutOrder = 0;
         },
         {
             Arrow = new('ImageLabel', {
-                Size = UDim2.new(1, 0, 1, 0);
+--                Size = UDim2.new(1, 0, 1, 0);
                 BackgroundTransparency = 1;
-                Image = 'rbxassetid://2244452978';
-                ImageRectOffset = Vector2.new(14*3, 0) * 2;
-                ImageRectSize = Vector2.new(14, 14) * 2;
-                ImageTransparency = 0;
-                Rotation = 90;
+--                Image = 'rbxassetid://2244452978';
+--                ImageRectOffset = Vector2.new(14*3, 0) * 2;
+ --               ImageRectSize = Vector2.new(14, 14) * 2;
+ --               ImageTransparency = 0;
+				Rotation = 90;
+				RBXTAG_FORK3X_Arrow = true;
             });
         });
 
         InstanceInfo = new('Frame', {
-            BackgroundTransparency = 1;
-            Size = UDim2.new(0, self.state.InstanceNameLength + 28/2 + 10/2, 1, 0);
-            LayoutOrder = 1;
+    --        BackgroundTransparency = 1;
+            Size = UDim2.new(0, 28/2 + 10/2, 1, 0);
+			LayoutOrder = 1;
+			AutomaticSize = Enum.AutomaticSize.X;
         },
         {
             InstanceIcon = new('ImageLabel', {
-                BackgroundTransparency = 1;
-                Image = 'rbxassetid://2245672825';
-                ImageRectOffset = (IconPosition - Vector2.new(1, 1)) * Vector2.new(16, 16);
-                ImageRectSize = Vector2.new(16, 16);
-                ImageTransparency = self.props.IsTarget and 0.5 or 0;
-                AnchorPoint = Vector2.new(0, 0.5);
-                Position = UDim2.new(0, 0, 0.5, 0);
-                Size = UDim2.new(0, 28/2, 0, 28/2);
-                LayoutOrder = 0;
+            --    BackgroundTransparency = 1;
+            --    Image = 'rbxassetid://2245672825';
+                ImageRectOffset = IconPosition;
+            --    ImageRectSize = Vector2.new(16, 16);
+            --   ImageTransparency = self.props.IsTarget and 0.5 or 0;
+         --      AnchorPoint = Vector2.new(0, 0.5);
+         --      Position = UDim2.new(0, 0, 0.5, 0);
+             --  Size = UDim2.new(0, 28/2, 0, 28/2);
+				LayoutOrder = 0;
+				RBXTAG_FORK3X_Icon = true;
+				RBXTAG_STATE_IsTarget = self.props.IsTarget;
             });
             InstanceName = new('TextLabel', {
-                BackgroundTransparency = 1;
-                Size = UDim2.new(0, self.state.InstanceNameLength, 0, 28/2);
+            --    BackgroundTransparency = 1;
+                Size = UDim2.new(0, 0, 0, 28/2);
                 Position = UDim2.new(0, 28/2 + 10/2, 0.5, 0);
                 AnchorPoint = Vector2.new(0, 0.5);
-                Font = Enum.Font.SourceSans;
-                TextSize = 33/2;
-                Text = self.state.InstanceName;
-                TextTransparency = self.props.IsTarget and 0.5 or 0;
-                TextYAlignment = Enum.TextYAlignment.Center;
-                TextColor3 = Color3.fromRGB(255, 255, 255);
+            --    Font = Enum.Font.SourceSans;
+			--	TextSize = 33/2;
+				--	RichText = true;
+				AutomaticSize = Enum.AutomaticSize.X;
+				Text = self.state.InstanceName;
+				RBXTAG_STATE_IsTarget = self.props.IsTarget;
+            --    TextTransparency = self.props.IsTarget and 0.5 or 0;
+            --    TextYAlignment = Enum.TextYAlignment.Center;
+            --   TextColor3 = Color3.fromRGB(255, 255, 255);
                 LayoutOrder = 1;
-            },
+			});
+			--[[
             {
                 TextShadow = new('TextLabel', {
                     BackgroundTransparency = 1;
                     Size = UDim2.new(1, 0, 1, 0);
                     Position = UDim2.new(0, 0, 0, 1);
                     Font = Enum.Font.SourceSans;
-                    TextSize = 33/2;
-                    Text = self.state.InstanceName;
+					TextSize = 33/2;
+					RichText = true;
+					Text = '<font family="rbxassetid://12187365977">' .. self.state.InstanceName  .. '</font>';
                     TextYAlignment = Enum.TextYAlignment.Center;
                     TextColor3 = Color3.fromRGB(112, 112, 112);
                     TextStrokeColor3 = Color3.fromRGB(112, 112, 112);
                     TextTransparency = self.props.IsTarget and 1 or 0.77;
                     TextStrokeTransparency = 0.77;
                     ZIndex = 0;
-                })
-            });
+                })]]
         });
 
         Tooltip = new(HotkeyTooltip, {
