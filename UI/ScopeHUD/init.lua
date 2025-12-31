@@ -11,7 +11,11 @@ local Maid = require(Libraries:WaitForChild 'Maid')
 local Support = require(Libraries:WaitForChild 'SupportLibrary')
 
 -- Roact
-local new = Roact.createElement
+local new = function(Type, props, ...)
+	props["RBXTAG_Native"] = true
+
+	return Roact.createElement(Type, props, ...)
+end
 local ScopeHierarchyItemButton = require(script:WaitForChild 'ScopeHierarchyItemButton')
 local HotkeyTooltip = require(script:WaitForChild 'HotkeyTooltip')
 local ModeToggle = require(script:WaitForChild 'ModeToggle')
@@ -148,14 +152,15 @@ function ScopeHUD:render()
         AnchorPoint = self.state.IsToolModeEnabled and
             Vector2.new(0, 1) or
             Vector2.new(0, 0);
-        Size = self.ContainerSize;
-        BackgroundTransparency = 1;
+		Size = self.ContainerSize;
+		RBXTAG_Scope = true;
+    --    BackgroundTransparency = 1;
         [Roact.Event.InputBegan] = self.OnInputBegin;
         [Roact.Event.InputEnded] = self.OnInputEnd;
-    },
-    Support.Merge(self:BuildScopeHierarchyButtons(), {
+	},
+	Support.Merge(self:BuildScopeHierarchyButtons(), {
         Layout = new('UIListLayout', {
-            [Roact.Ref] = self.LayoutRef;
+            --[Roact.Ref] = self.LayoutRef;
             FillDirection = Enum.FillDirection.Horizontal;
             HorizontalAlignment = Enum.HorizontalAlignment.Left;
             VerticalAlignment = Enum.VerticalAlignment.Center;
@@ -166,7 +171,7 @@ function ScopeHUD:render()
             Core = self.props.Core;
             IsToolModeEnabled = self.state.IsToolModeEnabled;
         });
-    }))
+	}),  script.Name, self)
 end
 
 --- Returns whether it should be possible to scope into the given item.
@@ -204,7 +209,8 @@ function ScopeHUD:BuildScopeHierarchyButtons()
             IsScope = (self.state.Scope == ScopePosition);
             IsScopable = (self.state.ScopeTarget == ScopePosition) and IsItemScopable(ScopePosition);
             IsScopeLocked = self.state.IsScopeLocked;
-            SetScopeFromButton = self.SetScopeFromButton;
+			SetScopeFromButton = self.SetScopeFromButton;
+			Core = self.props.Core;
             IsAltDown = self.state.IsAltDown;
             LayoutOrder = Index + 1;
         })
