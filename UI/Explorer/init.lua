@@ -3,6 +3,10 @@ local Libraries = Root:WaitForChild 'Libraries'
 local Vendor = Root:WaitForChild 'Vendor'
 local UI = Root:WaitForChild 'UI'
 local RunService = game:GetService 'RunService'
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
+
+local Options = script.Parent.Parent:WaitForChild("Options", 1) and require(script.Parent.Parent.Options)
 
 -- Libraries
 local Support = require(Libraries:WaitForChild 'SupportLibrary')
@@ -24,8 +28,11 @@ local Explorer = Roact.PureComponent:extend 'Explorer'
 function Explorer:init(props)
     self:setState {
         Items = {},
-        RowHeight = 18
-    }
+		RowHeight = 18,
+		SearchText = nil
+	}
+	
+	self.MaxSize, self.SetMaxSize = Roact.createBinding(Vector2.new())
 
     -- Update batching data
     self.UpdateQueues = {}
@@ -56,7 +63,7 @@ function Explorer:didUpdate(previousProps, previousState)
 end
 
 function Explorer:UpdateScope(Scope)
-    local Core = self.props.Core
+    local Core = self.props.BTCore
     local Selection = Core.Selection
 
     -- Clear previous cleanup maid
@@ -132,6 +139,7 @@ function Explorer:UpdateScope(Scope)
 end
 
 function Explorer:didMount()
+
     self.Mounted = true
 
     -- Create maid for cleanup on unmount
@@ -149,18 +157,20 @@ function Explorer:willUnmount()
     self.ItemMaid:Destroy()
 end
 
+--[[
 local function IsTargetable(Item)
 	return Item:IsA 'Model' or
 		Item:IsA 'BasePart' or
 		Item:IsA 'Tool' or
 		Item:IsA 'Accessory' or
-		Item:IsA 'Accoutrement'
+		Item:IsA 'Accoutrement' or
+		Item:IsA 'Attachment'
 end
 
 function Explorer.IsItemIndexable(Item)
     return (IsTargetable(Item) and Item.ClassName ~= 'Terrain') or
-        Item:IsA 'Folder'
-end
+		Item:IsA 'Folder'
+end]]
 
 function Explorer:UpdateTree()
 
@@ -171,12 +181,12 @@ function Explorer:UpdateTree()
 
     -- Track order of each item
     local OrderCounter = 1
-    local IdMap = self.IdMap
-
+	local IdMap = self.IdMap
+	
     -- Perform update to state
     self:setState(function (State)
         local Changes = {}
-        local Descendants = self.props.Scope:GetDescendants()
+		local Descendants = Options.GetIndexableItemsFunction(self.props.Scope, self.props.BTCore)
         local DescendantMap = Support.FlipTable(Descendants)
 
         -- Check all items in scope
@@ -202,7 +212,10 @@ function Explorer:UpdateTree()
             -- Introduce new items
             elseif self:BuildItemState(Item, self.props.Scope, OrderCounter, Changes, State) then
                 OrderCounter = OrderCounter + 1
-            end
+			end
+			if Index % 500 == 0 then
+				task.wait()
+			end
         end
 
         -- Remove old items from state
@@ -230,8 +243,8 @@ function Explorer:UpdateTree()
                     self:PropagateLock(ParentState, Changes, State)
                 end
 
-            end
-        end
+			end
+		end
 
         -- Update state
         return { Items = Support.MergeWithBlanks(State.Items, Changes) }
@@ -240,7 +253,7 @@ function Explorer:UpdateTree()
 end
 
 function Explorer:UpdateSelection(Items)
-    local Selection = self.props.Core.Selection
+    local Selection = self.props.BTCore.Selection
 
     -- Queue changed items
     self:QueueUpdate('Selection', Items)
@@ -273,9 +286,9 @@ function Explorer:BuildItemState(Item, Scope, Order, Changes, State)
     local Parent = Item.Parent
     local ParentId = self.IdMap[Parent]
 
-    -- Check if indexable and visible in hierarchy
-    local InHierarchy = ParentId or (Parent == Scope)
-    if not (self.IsItemIndexable(Item) and InHierarchy) then
+	-- Check if indexable and visible in hierarchy
+	local InHierarchy = ParentId or (Parent == Scope)
+    if not InHierarchy then
         return nil
     end
 
@@ -294,9 +307,13 @@ function Explorer:BuildItemState(Item, Scope, Order, Changes, State)
     -- Prepare item state
     local ItemState = {
         Id = ItemId,
-        Name = Item.Name,
+		Name = Item.Name,
+		
+		-- CustomName is basically if you want to display something else.
+		
+		CustomName = Options.CustomNameFunction(Item, game.Players.LocalPlayer),
         IsPart = IsPart,
-        IsLocked = IsPart and Item.Locked or nil,
+		IsLocked = IsPart and Item.Locked == true or IsPart and (not Options.CheckPermission(Item, game.Players.LocalPlayer)) or false,
         Class = Item.ClassName,
         Parent = Parent,
         Children = {},
@@ -304,7 +321,7 @@ function Explorer:BuildItemState(Item, Scope, Order, Changes, State)
         Order = Order,
         Expanded = nil,
         Instance = Item,
-        Selected = self.props.Core.Selection.IsSelected(Item) or nil
+        Selected = self.props.BTCore.Selection.IsSelected(Item) or nil
     }
 
     -- Register item state into changes
@@ -347,7 +364,8 @@ function Explorer:BuildItemState(Item, Scope, Order, Changes, State)
             for Item in pairs(Queue) do
                 local ItemId = self.IdMap[Item]
                 local ItemState = Support.CloneTable(State.Items[ItemId])
-                ItemState.Name = Item.Name
+				ItemState.Name = Item.Name
+				ItemState.CustomName = Item.Name
                 Changes[ItemId] = ItemState
             end
             return { Items = Support.Merge(State.Items, Changes) }
@@ -405,8 +423,8 @@ function Explorer:BuildItemState(Item, Scope, Order, Changes, State)
                 return { Items = Support.MergeWithBlanks(State.Items, Changes) }
             end)
 
-        end)
-    end
+		end)
+	end
 
     -- Indicate that item state was created
     return true
@@ -562,53 +580,147 @@ function Explorer:render()
     local state = self.state
 
     -- Display window
-    return new(ImageLabel, {
-        Active = true,
-        Layout = 'List',
-        LayoutDirection = 'Vertical',
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -100, 0.6, -380/2),
-        Width = UDim.new(0, 145),
-        Height = 'WRAP_CONTENT',
-        Image = 'rbxassetid://2244248341',
-        ScaleType = 'Slice',
-        SliceCenter = Rect.new(4, 4, 12, 12),
-        ImageTransparency = 1 - 0.93,
-        ImageColor = '3B3B3B'
+    return new("ImageLabel", {
+    --    Active = true,
+    --    AnchorPoint = Vector2.new(1, 0.5),
+	--	Position = UDim2.new(1, -130, 0.6, -380/2),
+	--	Size = UDim2.new(0, 145, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		RBXTAG_Explorer = true
+	--	Height = 'WRAP_CONTENT',
+	--	RBXTAG_Explorer = true
+    --    Image = 'rbxassetid://2244248341',
+   --     ScaleType = 'Slice',
+    --    SliceCenter = Rect.new(4, 4, 12, 12),
+    --    ImageTransparency = 1 - 0.4, -- 0.93
+	--	ImageColor3 = Color3.new(0, 0, 0) -- 3B3B3B
     },
-    {
+	{
+		Layout = new('UIListLayout', {
+			FillDirection = Enum.FillDirection.Vertical,
+			Padding = UDim.new(0, 0),
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+			VerticalAlignment = Enum.VerticalAlignment.Top,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+		
+		SizeConstraint = new('UISizeConstraint', {
+			MaxSize = self.MaxSize;
+			[Roact.Ref] = function (rbx)
+				if rbx then
+					self.SetMaxSize(workspace.CurrentCamera.ViewportSize - Vector2.new(0, 30))
+					workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+						self.SetMaxSize(workspace.CurrentCamera.ViewportSize - Vector2.new(0, 30))
+					end)
+				end
+			end;
+		});
         -- Window header
-        Header = new(TextLabel, {
-            Text = '  EXPLORER',
-            TextSize = 9,
-            Height = UDim.new(0, 14),
-            TextColor = 'FFFFFF',
-            TextTransparency = 1 - 0.6/2
-        },
+        Header = new("TextButton", {
+		--	Text = '<font family="rbxassetid://12187365977">  EXPLORER</font>',
+		--	Font = Enum.Font.Montserrat,
+		--	RichText = true,
+        --    TextSize = 9,
+        --    Height = UDim.new(0, 14),
+        --    TextColor = 'FFFFFF',
+			--    TextTransparency = 1 - 0.6/2
+			LayoutOrder = 1,
+			RBXTAG_Native = true;	
+			[Roact.Event.MouseButton1Down] = function (rbx)
+				local Dock: ImageLabel = rbx.Parent
+				local InitialAbsolutePosition = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
+				local InitialPosition = Dock:GetStyled("Position")
+
+				self.DockDragging = UserInputService.InputChanged:Connect(function (Input)
+					if (Input.UserInputType.Name == 'MouseMovement') or (Input.UserInputType.Name == 'Touch') then
+
+						-- Suppress activation response if dragging detected
+						if (Vector2.new(Input.Position.X, Input.Position.Y) - InitialAbsolutePosition).Magnitude > 3 then
+							rbx.Active = false
+						end
+
+						-- Reposition dock
+						Dock.Position = UDim2.new(
+							InitialPosition.X.Scale,
+							InitialPosition.X.Offset + (Input.Position.X - InitialAbsolutePosition.X),
+							InitialPosition.Y.Scale,
+							InitialPosition.Y.Offset + (Input.Position.Y - InitialAbsolutePosition.Y)
+						)
+					end
+				end)
+
+				self.DockDraggingEnd = UserInputService.InputEnded:Connect(function (Input)
+					if (Input.UserInputType.Name == 'MouseButton1') or (Input.UserInputType.Name == 'Touch') then
+						self.DockDragging:Disconnect()
+						self.DockDraggingEnd:Disconnect()
+						self.DockDragging = nil
+						self.DockDraggingEnd = nil
+						rbx.Active = true
+					end
+				end)
+			end;
+		},
+		
         {
-            CloseButton = new(ImageButton, {
-                Image = 'rbxassetid://2244452978',
-                ImageRectOffset = Vector2.new(0, 0),
-                ImageRectSize = Vector2.new(14, 14) * 2,
-                AspectRatio = 1,
-                AnchorPoint = Vector2.new(1, 0.5),
-                Position = UDim2.new(1, 0, 0.5, 0),
-                ImageTransparency = 1 - 0.34,
-                [Roact.Event.Activated] = props.Close
-            })
-        }),
+			CloseButton = new("ImageButton", {
+			--	Image = 'rbxassetid://2244452978',
+			--	ImageRectOffset = Vector2.new(0, 0),
+			--	ImageRectSize = Vector2.new(14, 14) * 2,
+			--	AspectRatio = 1,
+			--	AnchorPoint = Vector2.new(1, 0.5),
+			--	Position = UDim2.new(1, 0, 0.5, 0),
+				--	ImageTransparency = 1 - 0.34,
+				RBXTAG_Native = true;
+				[Roact.Event.Activated] = props.Close
+			})
+		}),
+		
+		SearchBox = new("Frame", {
+			--	Text = '<font family="rbxassetid://12187365977">  EXPLORER</font>',
+			--	Font = Enum.Font.Montserrat,
+			--	RichText = true,
+			--    TextSize = 9,
+			--    Height = UDim.new(0, 14),
+			--    TextColor = 'FFFFFF',
+			--    TextTransparency = 1 - 0.6/2
+			LayoutOrder = 2,
+			RBXTAG_Native = true;	
+		},
+
+		{
+			SearchInput = new("TextBox", {
+				--	Image = 'rbxassetid://2244452978',
+				--	ImageRectOffset = Vector2.new(0, 0),
+				--	ImageRectSize = Vector2.new(14, 14) * 2,
+				--	AspectRatio = 1,
+				--	AnchorPoint = Vector2.new(1, 0.5),
+				--	Position = UDim2.new(1, 0, 0.5, 0),
+				--	ImageTransparency = 1 - 0.34,
+				Text = "";
+				RBXTAG_Native = true;
+				[Roact.Event.FocusLost] = function(rbx)
+					if rbx then
+						self:setState({
+							SearchText = rbx.Text ~= "" and rbx.Text or Roact.None
+						})
+					end
+				end
+			})
+		}),
 
         -- Scrollable item list
         ItemList = new(ItemList, {
             Scope = props.Scope,
             Items = state.Items,
             ScrollTo = state.ScrollTo,
-            Core = props.Core,
+            BTCore = props.BTCore,
             IdMap = self.IdMap,
             RowHeight = state.RowHeight,
-            ToggleExpand = self.ToggleExpand
+			ToggleExpand = self.ToggleExpand,
+			SearchText = self.state.SearchText,
+			RevertToOldPosition = props.RevertToOldPosition
         })
-    })
+	},  script.Name, self)
 end
 
 return Explorer
