@@ -12,10 +12,10 @@ local function HotkeyTooltip(props)
     local Tooltip = nil
 
     -- Select appropriate tooltip
-    if props.IsAltDown then
+	if props.IsAltDown then
         if props.IsScopeParent then
             Tooltip = Roact.createElement(ScopeOutTooltip, props)
-        elseif props.IsScope and (not props.IsScopeLocked) then
+        elseif props.IsScope and not props.IsScopeLocked then
             Tooltip = Roact.createElement(ScopeLockTooltip, props)
         elseif props.IsScopable then
             Tooltip = Roact.createElement(ScopeInTooltip, props)
