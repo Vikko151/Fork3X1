@@ -89,18 +89,18 @@ function ItemRow:ToggleLock()
     }
 
     function HistoryRecord:Unapply()
-        props.Core.SyncAPI:Invoke('SetLocked', self.Parts, self.BeforeLocked)
+        props.BTCore.SyncAPI:Invoke('SetLocked', self.Parts, self.BeforeLocked)
     end
 
     function HistoryRecord:Apply()
-        props.Core.SyncAPI:Invoke('SetLocked', self.Parts, self.AfterLocked)
+        props.BTCore.SyncAPI:Invoke('SetLocked', self.Parts, self.AfterLocked)
     end
 
     -- Send lock toggling request to gameserver
     HistoryRecord:Apply()
 
     -- Register history record
-    props.Core.History.Add(HistoryRecord)
+    props.BTCore.History.Add(HistoryRecord)
 
 end
 
@@ -115,25 +115,25 @@ function ItemRow:SetName(Name)
     }
 
     function HistoryRecord:Unapply()
-        props.Core.SyncAPI:Invoke('SetName', self.Items, self.BeforeName)
+        props.BTCore.SyncAPI:Invoke('SetName', self.Items, self.BeforeName)
     end
 
     function HistoryRecord:Apply()
-        props.Core.SyncAPI:Invoke('SetName', self.Items, self.AfterName)
+        props.BTCore.SyncAPI:Invoke('SetName', self.Items, self.AfterName)
     end
 
     -- Send renaming request to gameserver
     HistoryRecord:Apply()
 
     -- Register history record
-    props.Core.History.Add(HistoryRecord)
+    props.BTCore.History.Add(HistoryRecord)
 
 end
 
 function ItemRow:HandleSelection()
     local props = self.props
-    local Selection = props.Core.Selection
-    local Targeting = props.Core.Targeting
+    local Selection = props.BTCore.Selection
+    local Targeting = props.BTCore.Targeting
 
     -- Check if scoping
     local Scoping = UserInputService:IsKeyDown 'LeftAlt' or
@@ -168,7 +168,7 @@ end
 function ItemRow:didMount()
     self.Maid = Maid.new()
 
-    local Targeting = self.props.Core.Targeting
+    local Targeting = self.props.BTCore.Targeting
     local Item = self.props.Instance
 
     -- Listen for targeting
@@ -186,51 +186,55 @@ function ItemRow:willUnmount()
     self.Maid = self.Maid:Destroy()
 end
 
-ItemRow.ClassIcons = {
-    Part = Vector2.new(2, 1),
-    MeshPart = Vector2.new(4, 8),
-    UnionOperation = Vector2.new(4, 8),
-    NegateOperation = Vector2.new(3, 8),
-    VehicleSeat = Vector2.new(6, 4),
-    Seat = Vector2.new(6, 4),
-    TrussPart = Vector2.new(2, 1),
-    CornerWedgePart = Vector2.new(2, 1),
-    WedgePart = Vector2.new(2, 1),
-    SpawnLocation = Vector2.new(6, 3),
-    Model = Vector2.new(3, 1),
-    Folder = Vector2.new(8, 8),
-    Tool = Vector2.new(8, 2),
-    Workspace = Vector2.new(10, 2),
-    Accessory = Vector2.new(3, 4),
-    Accoutrement = Vector2.new(3, 4)
-}
-
 function ItemRow:render()
-    local props = self.props
-    local state = self.state
+	local props = self.props
+	local state = self.state
+	
+	ItemRow.ClassIcons, ItemRow.DefaultPosition = props.BTCore.Options.GetClassIcons and props.BTCore.Options.GetClassIcons(props.BTCore.CurrentTheme) or {
+		Part = Vector2.new(2, 1),
+		MeshPart = Vector2.new(4, 8),
+		UnionOperation = Vector2.new(4, 8),
+		NegateOperation = Vector2.new(3, 8),
+		VehicleSeat = Vector2.new(6, 4),
+		Seat = Vector2.new(6, 4),
+		TrussPart = Vector2.new(2, 1),
+		CornerWedgePart = Vector2.new(2, 1),
+		WedgePart = Vector2.new(2, 1),
+		SpawnLocation = Vector2.new(6, 3),
+		Model = Vector2.new(3, 1),
+		Folder = Vector2.new(8, 8),
+		Tool = Vector2.new(8, 2),
+		Workspace = Vector2.new(10, 2),
+		Accessory = Vector2.new(3, 4),
+		Accoutrement = Vector2.new(3, 4),
+		Attachment = Vector2.new(2, 9)
+	}, Vector2.new()
 
     -- Determine icon for class
-    local IconPosition = ItemRow.ClassIcons[props.Class] or Vector2.new(1, 1)
-
+	local IconPosition = ItemRow.ClassIcons[props.Class] or Vector2.new(1, 1)
     -- Item information
-    local Metadata = new(Frame, {
-        Layout = 'List',
-        LayoutDirection = 'Horizontal',
-        VerticalAlignment = 'Center'
+    local Metadata = new("Frame", {
+--        Layout = 'List',
+ --       LayoutDirection = 'Horizontal',
+ --       VerticalAlignment = 'Center'
     },
-    {
+	{
+		Layout = new('UIListLayout', {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 0),
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+		
         StartSpacer = new(Frame, {
             AspectRatio = (5 + 10 * props.Depth) / 18,
             LayoutOrder = 0
         }),
 
         -- Class icon
-        Icon = new(ImageLabel, {
-            AspectRatio = 1,
-            Image = 'rbxassetid://2245672825',
-            ImageRectOffset = (IconPosition - Vector2.new(1, 1)) * Vector2.new(16, 16),
-            ImageRectSize = Vector2.new(16, 16),
-            Size = UDim2.new(1, 0, 12/18, 0),
+        Icon = new("ImageLabel", {
+            ImageRectOffset = IconPosition;--(IconPosition - Vector2.new(1, 1)) * Vector2.new(16, 16),
             LayoutOrder = 1
         }),
 
@@ -240,24 +244,29 @@ function ItemRow:render()
         }),
 
         -- Item name
-        NameContainer = new(ImageButton, {
-            Layout = 'List',
-            Width = 'WRAP_CONTENT',
+        NameContainer = new("ImageButton", {
+    --        Layout = 'List',
+			Size = UDim2.new(0, 0, 1, 0),
             LayoutOrder = 3,
             [Roact.Event.Activated] = self.OnNameActivated
         },
         {
-            Name = (not state.EditingName) and new(TextLabel, {
-                TextSize = 13,
-                TextColor = 'FFFFFF',
-                Text = props.Name,
-                Width = 'WRAP_CONTENT'
+            Name = (not state.EditingName) and new("TextLabel", {
+            --    TextSize = 13,
+			--	TextColor3 = Color3.fromHex('FFFFFF'),
+				Text = props.CustomName,
+			--	RichText = true,
+			--	FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+				Size = UDim2.new(0, 0, 1, 0),
+                AutomaticSize = Enum.AutomaticSize.X
             }),
-            NameInput = state.EditingName and new(TextBox, {
-                TextSize = 13,
-                TextColor = 'FFFFFF',
-                Text = props.Name,
-                Width = 'WRAP_CONTENT',
+            NameInput = state.EditingName and new("TextBox", {
+            --    TextSize = 13,
+			--	TextColor3 = Color3.fromHex('FFFFFF'),
+				Text = props.Name,
+			--	FontFace = Font.new("rbxassetid://12187365977", Enum.FontWeight.Medium, Enum.FontStyle.Normal),
+				Size = UDim2.new(0, 0, 1, 0),
+				AutomaticSize = Enum.AutomaticSize.X,
                 [Roact.Event.FocusLost] = self.OnNameInputBlur
             })
         })
@@ -265,25 +274,33 @@ function ItemRow:render()
 
     -- Item buttons
     local Buttons = new(Frame, {
-        Layout = 'List',
-        LayoutDirection = 'Horizontal',
-        HorizontalAlignment = 'Right',
-        VerticalAlignment = 'Center',
-        Width = 'WRAP_CONTENT',
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, 0, 0.5, 0)
+   --     Layout = 'List',
+   --     LayoutDirection = 'Horizontal',
+    --    HorizontalAlignment = 'Right',
+    --    VerticalAlignment = 'Center',
+    --   Width = 'WRAP_CONTENT',
+    --    AnchorPoint = Vector2.new(1, 0.5),
+    --    Position = UDim2.new(1, 0, 0.5, 0)
     },
     {
-        -- Locking button
-        Lock = new(ImageButton, {
-            AspectRatio = 1,
-            DominantAxis = 'Height',
-            Image = 'rbxassetid://2244452978',
-            ImageRectOffset = Vector2.new(14 * (props.IsLocked and 2 or 1), 0) * 2,
-            ImageRectSize = Vector2.new(14, 14) * 2,
-            Size = UDim2.new(1, 0, 12/18, 0),
-            ImageTransparency = 1 - (props.IsLocked and 0.75 or 0.15),
-            LayoutOrder = 0,
+		-- Locking button
+		Layout = new('UIListLayout', {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 0),
+			HorizontalAlignment = Enum.HorizontalAlignment.Right,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+        Lock = new("ImageButton", {
+ --           AspectRatio = 1,
+--            DominantAxis = 'Height',
+--            Image = 'rbxassetid://2244452978',
+--            ImageRectOffset = Vector2.new(14 * (props.IsLocked and 2 or 1), 0) * 2,
+--            ImageRectSize = Vector2.new(14, 14) * 2,
+ --           Size = UDim2.new(1, 0, 12/18, 0),
+--            ImageTransparency = 1 - (props.IsLocked and 0.75 or 0.15),
+			LayoutOrder = 0,
+			RBXTAG_STATE_Locked = props.IsLocked,
             [Roact.Event.Activated] = self.OnLockActivated
         }),
 
@@ -293,18 +310,19 @@ function ItemRow:render()
         }),
 
         -- Item expansion arrow
-        ArrowWrapper = next(props.Children) and new(Frame, {
-            AspectRatio = 1,
-            Size = UDim2.new(1, 0, 14/18, 0),
-            LayoutOrder = 2
+		ArrowWrapper = next(props.Children) and new("Frame", {
+--           AspectRatio = 1,
+  --          Size = UDim2.new(1, 0, 14/18, 0),
+           LayoutOrder = 2
         },
         {
-            Arrow = new(ImageButton, {
-                Image = 'rbxassetid://2244452978',
-                ImageRectOffset = Vector2.new(14 * 3, 0) * 2,
-                ImageRectSize = Vector2.new(14, 14) * 2,
-                Rotation = props.Expanded and 180 or 90,
-                ImageTransparency = 1 - 0.15,
+            Arrow = new("ImageButton", {
+      --          Image = 'rbxassetid://2244452978',
+      --          ImageRectOffset = Vector2.new(14 * 3, 0) * 2,
+      --          ImageRectSize = Vector2.new(14, 14) * 2,
+      --          Rotation = props.Expanded and 180 or 90,
+				--          ImageTransparency = 1 - 0.15,
+				RBXTAG_STATE_Pressed = props.Expanded,
                 [Roact.Event.Activated] = self.OnArrowActivated
             })
         }),
@@ -324,12 +342,13 @@ function ItemRow:render()
     end
 
     -- Return button with contents
-    return new(ImageButton, {
+    return new("ImageButton", {
         LayoutOrder = props.Order,
         Size = UDim2.new(1, 0, 0, props.Height),
-        AutoButtonColor = false,
-        BackgroundColor3 = Color3.new(1, 1, 1),
-        BackgroundTransparency = Transparency,
+    --    AutoButtonColor = false,
+    --    BackgroundColor3 = Color3.new(1, 1, 1),
+		--     BackgroundTransparency = Transparency,
+		RBXTAG_STATE_Selected = props.Selected,
         [Roact.Event.Activated] = self.OnActivated
     },
     {
