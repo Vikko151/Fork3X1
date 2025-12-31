@@ -8,7 +8,11 @@ local ContextActionService = game:GetService('ContextActionService')
 local Roact = require(Vendor:WaitForChild('Roact'))
 local Cryo = require(Libraries:WaitForChild('Cryo'))
 local Maid = require(Libraries:WaitForChild('Maid'))
-local new = Roact.createElement
+local new = function(Type, props, ...)
+	props["RBXTAG_Native"] = true
+
+	return Roact.createElement(Type, props, ...)
+end
 
 -- Create component
 local Slider = Roact.PureComponent:extend(script.Name)
@@ -25,11 +29,11 @@ end
 function Slider:render()
     return new('ImageButton', {
         Active = false;
-        Size = self.props.Size;
-        BackgroundColor3 = self.props.BackgroundColor3;
+   --     Size = self.props.Size;
+  --      BackgroundColor3 = self.props.BackgroundColor3;
         LayoutOrder = self.props.LayoutOrder;
-        AutoButtonColor = false;
-        BorderSizePixel = 0;
+    --    AutoButtonColor = false;
+    --    BorderSizePixel = 0;
         [Roact.Event.InputBegan] = function (rbx, Input)
             if (Input.UserInputType.Name == 'MouseButton1') or
                (Input.UserInputType.Name == 'Touch') then
@@ -38,35 +42,36 @@ function Slider:render()
             end
         end;
     }, Cryo.Dictionary.join(self.props[Roact.Children] or {}, {
-        Corners = new('UICorner', {
-            CornerRadius = UDim.new(0, 4);
-        });
+     --   Corners = new('UICorner', {
+    --        CornerRadius = UDim.new(0, 4);
+    --    });
         Thumb = new('Frame', {
             AnchorPoint = Vector2.new(0.5, 0.5);
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-            BorderSizePixel = 0;
+    --        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+    --        BorderSizePixel = 0;
             Position = (typeof(self.props.Value) == 'number') and
                 self.props.Value or
                 self.props.Value:map(function (Value)
                     return UDim2.new(Value, 0, 0.5, 0)
                 end);
-            Size = UDim2.new(0, 4, 0, 4);
+    --        Size = UDim2.new(0, 4, 0, 4);
             ZIndex = 2;
         }, {
-            Corners = new('UICorner', {
-                CornerRadius = UDim.new(1, 0);
-            });
+        --    Corners = new('UICorner', {
+        --        CornerRadius = UDim.new(1, 0);
+			--    });
+		--[[
             Shadow = new('Frame', {
                 AnchorPoint = Vector2.new(0.5, 0.5);
-                BackgroundColor3 = Color3.fromRGB(56, 56, 56);
-                BorderSizePixel = 0;
+        --        BackgroundColor3 = Color3.fromRGB(56, 56, 56);
+        --        BorderSizePixel = 0;
                 Position = UDim2.new(0.5, 0, 0.5, 0);
-                Size = UDim2.new(0, 6, 0, 6);
+        --        Size = UDim2.new(0, 6, 0, 6);
             }, {
                 Corners = new('UICorner', {
                     CornerRadius = UDim.new(1, 0);
                 })
-            });
+            });]]
         });
     }))
 end
