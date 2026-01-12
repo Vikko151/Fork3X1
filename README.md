@@ -71,8 +71,6 @@ Remember to check the Options module when used in-game! There's a lot of stuff y
 
 Of course! Fork3X is under a public license (unlicense), which basically means "Here's what I made, do whatever you want with."
 
-I have first hesitated to give Fork3X under the MIT license, but Fork3X couldn't have existed without F3X (no "rebrand" with the MIT license), so I want to offer the same opportunity to other people.
-
 So, yes, you can make your fork, use it in your admin system, or even sell it (wait, no, don't do it, bad idea).
 
 ## Q&A:
