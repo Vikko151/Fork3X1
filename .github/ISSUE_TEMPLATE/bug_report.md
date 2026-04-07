@@ -1,9 +1,9 @@
 ---
 name: Bug report
 about: Report a bug that needs a fix
-title: Where it happens - What's the bug
+title: "[BUG] Where it happens - What's the bug"
 labels: bug
-assignees: ''
+assignees: VikkoMakesStuff
 
 ---
 
