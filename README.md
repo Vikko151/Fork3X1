@@ -52,22 +52,7 @@ Although raidRoleplay is old, it seems to work very well when used with Fork3X. 
 
 ## How do I get Fork3X?
 
-As you may know, Roblox's moderation does an EXCELLENT job, and forbids Fork3X from being uploaded on the creator store.
-
-Instead, I prefer sharing Fork3X in the following ways:
-
-### On GitHub (plugin and in-game): 
-Click on the latest version in the right tab, and install the file according to your needs.
-
-For in-game use, insert the downloaded file by right clicking on the desired location in your game and selecting the file in Insert -> Import Roblox Model (in the new UI, this might be different in the old one).
-
-### On Roblox (in-game): 
-
-Open the test place in studio, and find your desired version in ServerStorage -> Version.
-
-In order to mount the plugin, head to %localappdata%/Roblox/Plugins, and drop the file you installed.
-
-Remember to check the Options module when used in-game! There's a lot of stuff you can tweak, mostly the old UI (you can find out how in the Q&A).
+You can follow the instructions [here](https://github.com/VikkoMakesStuff/Fork3X/wiki/Installing-and-Maintaining-Fork3X) to install Fork3X. In case you need help or encounter a roadblock, feel free to hit me up via Discussions or Discord (soon™).
 
 ## Can I make my own fork of Fork3X?
 
