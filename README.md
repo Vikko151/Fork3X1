@@ -317,3 +317,6 @@ The real reason Roblox blocks Fork3X is unknown, but Fork3X uses a method (Asset
 If this answer doesn't satisfy you, the code is available here if you want to make sure it isn't obfuscated.
 
 </details>
+</details>
+
+This resource is brought to you by @VikkoMakesStuff (aka Vikko151)!
