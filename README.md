@@ -6,7 +6,7 @@
 
 ## Current version: v3.2.0
 
-v3.2.1 is currently being worked on, and is set to release end of the month. You can find more information [here](https://github.com/VikkoMakesStuff/Fork3X/discussions/7).
+v3.2.1 is in beta! Feel free to give it a try and report any bug you encounter!
 
 ## Introduction:
 
