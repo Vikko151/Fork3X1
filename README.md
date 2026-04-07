@@ -279,7 +279,7 @@ I will try by 2026 to extract a few parts of Fork3X and open-source them alone. 
 </details>
 <details>
 <summary>Q: Can you help me for a project?</summary>
-I know it's an unserious way to say it, but I am not made for communities. At all. You're better off checking tutorials here or ask how to do something.
+Although I help for a game, I am not for hire nor hiring. You can simply ask me questions about Fork3X, but I won't integrate myself into a new community.
 </details>
 <details>
 <summary>Q: Can I change the number of save slots?</summary>
