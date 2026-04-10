@@ -4,9 +4,9 @@
 
 ## [Try it!](https://www.roblox.com/join/ix61y) | [Roblox model](https://create.roblox.com/store/asset/74515839665793/Fork3X-Building-Tools-F3X-MOD)
 
-## Current version: v3.2.0
+## Current version: v3.2.1
 
-v3.2.1 is in beta! Feel free to give it a try and report any bug you encounter!
+You can get it [here](https://github.com/VikkoMakesStuff/Fork3X/releases/tag/minorupdate1).
 
 ## Introduction:
 
