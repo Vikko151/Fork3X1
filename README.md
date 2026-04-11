@@ -319,6 +319,15 @@ The real reason Roblox blocks CMNt is unknown, but CMNt uses a method (AssetServ
 If this answer doesn't satisfy you, the code is available here if you want to make sure it isn't obfuscated.
 
 </details>
+
+<details>
+<summary>Q: What happened to Fork3X?</summary>
+
+CMNt and Fork3X are the same product! Fork3X is CMNt's former name, and had to be scrapped due to Roblox's moderation banning Fork3X games for "discrimination".
+
+Although less self-explanatory, CMNt has no negative interpretation and should comply to Roblox's Community Standards.
+
+</details>
 </details>
 
 This resource is brought to you by @VikkoMakesStuff (aka Vikko151)!
