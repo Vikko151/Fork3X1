@@ -1,25 +1,27 @@
 <div align="center">
 
-# Fork3X 
+# CMNt 
 
-## [Try it!](https://www.roblox.com/join/ix61y) | [Roblox model](https://create.roblox.com/store/asset/74515839665793/Fork3X-Building-Tools-F3X-MOD)
+## [Try it!](https://www.roblox.com/join/ix61y) | [Roblox model](https://create.roblox.com/store/asset/74515839665793/CMNt-Building-Tools-F3X-MOD)
 
 ## Current version: v3.2.1
 
-You can get it [here](https://github.com/VikkoMakesStuff/Fork3X/releases/tag/minorupdate1).
+You can get it [here](https://github.com/VikkoMakesStuff/CMNt/releases/tag/minorupdate1).
 
 ## Introduction:
 
-Fork3X is a mod of F3X's building tools that aims to offer a wonderfully simple set of tools, alongside better customisability and control.
+CMNt (formerly Fork3X, changed due to Roblox moderation) is a mod of F3X's building tools that aims to offer a wonderfully simple set of tools, alongside better customisability and control.
+
+The name is the initials of "CMNt's Moniker is No longer Tolerated", in reference to the reason why it got renamed. It's also pronunciated "Cement", and not "Comment".
 
 This fork's main goal is to allow developers to choose how they want their building tools to work, look like, and also to manage their game in a better way (if used in-game).
 
-Note Fork3X doesn't aim to surpass built-in tools, and should be used in studio only to simplify.
+Note CMNt doesn't aim to surpass built-in tools, and should be used in studio only to simplify.
 
 </div>
 
 <details>
-<summary>Some features inside Fork3X</summary>
+<summary>Some features inside CMNt</summary>
 - <b>Marketplace Tool</b>: mostly for in-game use, allows players to search images and meshes without opening the creator store.<br/>
 - <b>Text Tool</b>: write text on parts, without headache.<br/>
 - <b>Transformation Tool</b>: an unique union system that allows separation and saving without built-in tools.<br/>
@@ -36,27 +38,27 @@ Note Fork3X doesn't aim to surpass built-in tools, and should be used in studio 
 
 <div align="center">
 
-## Is Fork3X BETTER than F3X?
+## Is CMNt BETTER than F3X?
 
 It's all about expectations.
 
-Fork3X might be a more interesting option if you want a simple way to modify F3X (aka letting me suffer in my side), new features, fixes, and a wiki that's still being worked on.
+CMNt might be a more interesting option if you want a simple way to modify F3X (aka letting me suffer in my side), new features, fixes, and a wiki that's still being worked on.
 
 Use F3X if you don't want a potential bug terrarium, but rather a rock-solid tool that's promised to always work.
 
 The best is to try both and see which one fits you.
 
-## I have raidRoleplay in my game, is Fork3X a good idea?
+## I have raidRoleplay in my game, is CMNt a good idea?
 
-Although raidRoleplay is old, it seems to work very well when used with Fork3X. Just expect the log to not print actions done with the new tools.
+Although raidRoleplay is old, it seems to work very well when used with CMNt. Just expect the log to not print actions done with the new tools.
 
-## How do I get Fork3X?
+## How do I get CMNt?
 
-You can follow the instructions [here](https://github.com/VikkoMakesStuff/Fork3X/wiki/Installing-and-Maintaining-Fork3X) to install Fork3X. In case you need help or encounter a roadblock, feel free to hit me up via Discussions or Discord (soon™).
+You can follow the instructions [here](https://github.com/VikkoMakesStuff/CMNt/wiki/Installing-and-Maintaining-CMNt) to install CMNt. In case you need help or encounter a roadblock, feel free to hit me up via Discussions or Discord (soon™).
 
-## Can I make my own fork of Fork3X?
+## Can I make my own fork of CMNt?
 
-Of course! Fork3X is under a public license (unlicense), which basically means "Here's what I made, do whatever you want with."
+Of course! CMNt is under a public license (unlicense), which basically means "Here's what I made, do whatever you want with."
 
 So, yes, you can make your fork, use it in your admin system, or even sell it (wait, no, don't do it, bad idea).
 
@@ -66,7 +68,7 @@ So, yes, you can make your fork, use it in your admin system, or even sell it (w
 <details>
 <summary>Click the arrow to open the Q&A</summary>
 <details>
-<summary>Q: What are every new features in Fork3X?</summary>
+<summary>Q: What are every new features in CMNt?</summary>
 <details>
 <summary>Tools</summary>
   
@@ -191,17 +193,17 @@ PS: this list needs to be update with v3.2.0. Sorry for the inconvenience!
 </details>
 <details>
 <summary>Q: Your fork damaged my game!</summary>
-Fork3X is under a public license, which means I take no responsibility on a misuse or aftereffects of Fork3X. You can get some tips for a good implementation below.
+CMNt is under a public license, which means I take no responsibility on a misuse or aftereffects of CMNt. You can get some tips for a good implementation below.
 </details>
 <details>
-<summary>Q: How shall I implement Fork3X?</summary>
-The UI is a major issue of a bad implementation of Fork3X. Use GigsDark (the old UI) first and make CementDark optional.
-As a reminder, I'm a solo developer, and have very limited timetables. I cannot promise Fork3X to be 100% bug-free, so be careful to not implement it too quickly (keep F3X as an option).
-Bug reports and questions concerning setting up certain things in Fork3X are always welcome here.
+<summary>Q: How shall I implement CMNt?</summary>
+The UI is a major issue of a bad implementation of CMNt. Use GigsDark (the old UI) first and make CementDark optional.
+As a reminder, I'm a solo developer, and have very limited timetables. I cannot promise CMNt to be 100% bug-free, so be careful to not implement it too quickly (keep F3X as an option).
+Bug reports and questions concerning setting up certain things in CMNt are always welcome here.
 Remember to not make the security too harsh. Try to use a strike system instead, or just send messages via a webhook (yes, there's built-in support!)
 </details>
 <details>
-<summary>Q: How do I ... in Fork3X?</summary>
+<summary>Q: How do I ... in CMNt?</summary>
 Note this is only a non-exhaustive list of "tutorials" that can be found in the wiki and in the replies here (this needs to be updated, sorry for the inconvenience).
 </details>
 <details>
@@ -221,8 +223,8 @@ Themes are the new alternative that consists to modify the UI with components an
 You need little to no scripting knowledges to do so. You can even edit Roact (UI inside script very brief) objects without Roact, which is really reassuring for most people (me included). One of the first tutorials (after the API keys one) I'll make will be centered on this. Stay tuned!
 </details>
 <details>
-<summary>Q: What security features can be covered with Fork3X?</summary>
-Taken from "Q: What are every new features in Fork3X?":
+<summary>Q: What security features can be covered with CMNt?</summary>
+Taken from "Q: What are every new features in CMNt?":
 • Permissions (with CheckPermission and SetPermission functions)
   
 • Anti-unanchor bombing
@@ -261,25 +263,25 @@ Doing so would be very nice, but it's not necessary as credits can be found in t
 <summary>Q: I hate the new UI!</summary>
 Even if v3.2.0 brings essential improvements to the UI, note that UI designing isn't my thing and that it's completely fine to not like it.
 
-You can use back the old UI this way (from "Q: How do I ... in Fork3X?"):
+You can use back the old UI this way (from "Q: How do I ... in CMNt?"):
 </details>
 <details>
 <summary>Q: Why do the yellow/blue/any color bubbles stay even after unselecting?</summary>
 This is not normal. That's a common tomfoolery of mine. Please report it here if it ever happens.
 </details>
 <details>
-<summary>Q: How is Fork3X's code?</summary>
+<summary>Q: How is CMNt's code?</summary>
 I'd consider it as average. Although there is no type checking, the code should be mostly clean.
 
 Anyway, don't tire yourself trying to find crap in the code. It's just F3X.
 </details>
 <details>
-<summary>Q: Can I use a module inside Fork3X for my own projects?</summary>
-I will try by 2026 to extract a few parts of Fork3X and open-source them alone. This allows me to offer the cleanest samples for uses outside Fork3X.
+<summary>Q: Can I use a module inside CMNt for my own projects?</summary>
+I will try by 2026 to extract a few parts of CMNt and open-source them alone. This allows me to offer the cleanest samples for uses outside CMNt.
 </details>
 <details>
 <summary>Q: Can you help me for a project?</summary>
-Although I help for a game, I am not for hire nor hiring. You can simply ask me questions about Fork3X, but I won't integrate myself into a new community.
+Although I help for a game, I am not for hire nor hiring. You can simply ask me questions about CMNt, but I won't integrate myself into a new community.
 </details>
 <details>
 <summary>Q: Can I change the number of save slots?</summary>
@@ -297,22 +299,22 @@ The only particularity a hacker has compared to players is firing high rates of 
 If too many events are fired, throttling will occur, making spamming useless, in addition of general securities.
 </details>
 <details>
-<summary>Q: I want to support Fork3X!</summary>
-I don't want to earn money from Fork3X. I totally develop it as a passion, so simply using it in your game is the best way to support Fork3X.
+<summary>Q: I want to support CMNt!</summary>
+I don't want to earn money from CMNt. I totally develop it as a passion, so simply using it in your game is the best way to support CMNt.
 </details>
 <details>
 <summary>Q: Why is the DevForum page outdated?</summary>
   
 As I am heavily against age gating the access to culture, I don't want to complete an age check nor motivate people to give out their sensitive information simply to report bugs and give feedback.
 
-GitHub is the main place for the Fork3X community as anyone can see what bugs got reported and such, but I might also let people DM me on Discord (13+, please respect this rule as it's here for your safety) to not force people to have a GitHub account to contribute.
+GitHub is the main place for the CMNt community as anyone can see what bugs got reported and such, but I might also let people DM me on Discord (13+, please respect this rule as it's here for your safety) to not force people to have a GitHub account to contribute.
 
 </details>
 <details>
-<summary>Q: If Fork3X can't be on the Creator Store, is it because it's unsafe?</summary>
+<summary>Q: If CMNt can't be on the Creator Store, is it because it's unsafe?</summary>
 
   
-The real reason Roblox blocks Fork3X is unknown, but Fork3X uses a method (AssetService:LoadAssetAsync) to estimate a mesh's size that Roblox blacklisted. This function is sandboxed, meaning that Fork3X will **never**  insert content against your will.
+The real reason Roblox blocks CMNt is unknown, but CMNt uses a method (AssetService:LoadAssetAsync) to estimate a mesh's size that Roblox blacklisted. This function is sandboxed, meaning that CMNt will **never**  insert content against your will.
 
 If this answer doesn't satisfy you, the code is available here if you want to make sure it isn't obfuscated.
 
