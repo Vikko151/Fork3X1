@@ -1,6 +1,6 @@
 <div align="center">
 
-# Fork3X 
+<img width="256" height="256" alt="fork3xtransparent" src="https://github.com/user-attachments/assets/c79cab95-49d5-444d-9c76-618e526f2b52" />
 
 ## [Try it!](https://www.roblox.com/join/ix61y) | [Roblox model](https://create.roblox.com/store/asset/74515839665793/Fork3X-Building-Tools-F3X-MOD)
 
