@@ -10,7 +10,7 @@ You can get it [here](https://github.com/VikkoMakesStuff/Fork3X/releases/tag/min
 
 ## Introduction:
 
-Fork3X is a mod of F3X's building tools that aims to offer a wonderfully simple set of tools, alongside better customisability and control.
+Fork3X is a mod of F3X's building tools that aims to offer a wonderfully simple set of tools, alongside better customisability and control. It's not only a powerful tool, but also a love letter to modding thanks to its customisability and extra features.
 
 This fork's main goal is to allow developers to choose how they want their building tools to work, look like, and also to manage their game in a better way (if used in-game).
 
