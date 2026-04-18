@@ -10,7 +10,7 @@
 
 </div>
 
-It brings to users - both in-game and in Studio - a wonderfully simple set of powerful tools that make building easier and faster.
+It brings users - both in-game and in Studio - a wonderfully simple set of powerful tools that make building easier and faster.
 
 The goal of Fork3X is to **offer new features, better performance, and let developers stand out with a customisability that lets them make THEIR tools.** It's here to help your game, but also to make it.
 
