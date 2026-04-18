@@ -60,7 +60,7 @@ Do note Fork3X doesn't attempt to surpass the built-in Studio Tools, although th
 
 ### You can find the latest release [here](https://github.com/VikkoMakesStuff/Fork3X/releases/latest)
 
-This wiki page explains you how to setup Fork3X, and gives many tips that help you make your game better.
+[This wiki page](https://github.com/VikkoMakesStuff/Fork3X/wiki/Installing-and-Maintaining-Fork3X) explains you how to setup Fork3X, and gives many tips that help you make your game better.
 
 ## Features
 
