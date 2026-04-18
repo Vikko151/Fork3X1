@@ -74,7 +74,7 @@ Fork3X introduces new, simple tools that help the player building without headac
 >
 > **Text Tool**
 >
-> A tool that allows users to write text on their part. Rich text is also supported, offering a great palette of possibilities for player to customise their text.
+> A tool that allows users to write text on their part. Rich text is also supported, offering a great palette of possibilities to players to customise their text.
 >
 > **Transformation Tool**
 >
