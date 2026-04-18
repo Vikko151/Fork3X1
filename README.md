@@ -102,11 +102,11 @@ Roblox's built-in UI styling is supported by Fork3X, making customisability easi
 >
 > **Mesh resizing**
 >
-> When resizing parts with a mesh, F3X used to not resize the meshes when doing so. Fork3X allows this to be done.
+> When resizing parts with meshes, F3X used to only resize the part and not their meshes. Fork3X allows this to be done.
 >
 > **New properties here and there**
 >
->Fork3X offers more properties to configure with most tools, including Massless, decal color and such.
+> Fork3X offers more properties to configure with most tools, including Massless, decal color and such.
 >
 > **Improved weld tool**
 >
@@ -128,7 +128,7 @@ Roblox's built-in UI styling is supported by Fork3X, making customisability easi
 
 ### Mobile compatibility
 
-Although not a top priority, Fork3X narrows the gap between the keyboard-mouse and touch device experiences. Multiple utility and keybinds can now be triggered via a button, making them accessible to the majority of your playerbase.
+Although not a top priority, Fork3X narrows the gap between the keyboard-mouse and touch device experiences. Multiple utilities and keybinds can now be triggered via buttons, making them accessible to the majority of your playerbase.
 
 ### F3X servers replacement
 
