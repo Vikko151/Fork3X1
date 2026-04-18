@@ -326,7 +326,7 @@ Themes are a modern and simpler way to customise the interface. They modify the 
   
 - Learning how to use selectors and be able to inject UI objects inside the UI.
 
-You need little to no scripting knowledges to use them. You can even edit Roact (UI inside script very brief) objects without Roact, which is really reassuring for most people (me included). A tutorial about this is planned, so stay tuned!
+You need little to no scripting knowledges to use them. You can even edit Roact (aka UI created and maintained by scripts) objects without Roact, which is really reassuring for most people (me included). A tutorial about this is planned, so stay tuned!
 
 ### What security features can be covered with Fork3X?
 
