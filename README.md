@@ -96,35 +96,35 @@ Roblox's built-in UI styling is supported by Fork3X, making customisability easi
 
 ### Many extra features
 
-**Focus-wise coordinates**
-
-The new focus-wise mode for the move and rotate tools allow the user to move a whole selection with extreme precision by moving the "focus" with the coordinates. In Global mode, the focus is the whole selection's boundaries that's used as a reference, similarly to models' pivots.
-
-**Mesh resizing**
-
-When resizing parts with a mesh, F3X used to not resize the meshes when doing so. Fork3X allows this to be done.
-
-**New properties here and there**
-
-Fork3X offers more properties to configure with most tools, including Massless, decal color and such.
-
-**Improved weld tool**
-
-The weld tool has become the constraint tool. You can now by default add ropes, rods and hinges to your part to have an easier time building machines and wacky mechanisms.
-
-In the future v3.2.2, YOU will be able choose the constraints you want. This will open a large palette of possibilities and control over what you deem safe and useful for your game.
-
-**New effects with the Decorate Tool**
-
-Push the Roblox engine to its limits with 3 new effects added to the Decorate Tool: **Particle Emitters, Selection Boxes and Highlights.** This allows you (and players) to create breathtaking effects and builds.
-
-**Accurate mesh size control**
-
-Having to resize a mesh to fit to your part's boundaries has always been a painful process with meshes with F3X. [With some tweaking](https://github.com/VikkoMakesStuff/Fork3X/discussions/9), you can say goodbye to these issues, and gain precious minutes.
-
-**Saving/Loading**
-
-Allowing your users to save hours of work is essential, and this is what Fork3X wants to make possible. v3.2.1 introduced a new Save/Load interface that offers previews, compression, and a readable encoding for creators to contribute to that objective.
+> **Focus-wise coordinates**
+>
+> The new focus-wise mode for the move and rotate tools allow the user to move a whole selection with extreme precision by moving the "focus" with the coordinates. In Global mode, the focus is the whole selection's boundaries that's used as a reference, similarly to models' pivots.
+>
+> **Mesh resizing**
+>
+> When resizing parts with a mesh, F3X used to not resize the meshes when doing so. Fork3X allows this to be done.
+>
+> **New properties here and there**
+>
+>Fork3X offers more properties to configure with most tools, including Massless, decal color and such.
+>
+> **Improved weld tool**
+>
+> The weld tool has become the constraint tool. You can now by default add ropes, rods and hinges to your part to have an easier time building machines and wacky mechanisms.
+>
+> In the future v3.2.2, YOU will be able choose the constraints you want. This will open a large palette of possibilities and control over what you deem safe and useful for your game.
+>
+> **New effects with the Decorate Tool**
+>
+> Push the Roblox engine to its limits with 3 new effects added to the Decorate Tool: **Particle Emitters, Selection Boxes and Highlights.** This allows you (and players) to create breathtaking effects and builds.
+>
+> **Accurate mesh size control**
+>
+> Having to resize a mesh to fit to your part's boundaries has always been a painful process with meshes with F3X. [With some tweaking](https://github.com/VikkoMakesStuff/Fork3X/discussions/9), you can say goodbye to these issues, and gain precious minutes.
+>
+> **Saving/Loading**
+>
+> Allowing your users to save hours of work is essential, and this is what Fork3X wants to make possible. v3.2.1 introduced a new Save/Load interface that offers previews, compression, and a readable encoding for creators to contribute to that objective.
 
 ### Mobile compatibility
 
