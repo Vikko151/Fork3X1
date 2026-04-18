@@ -33,7 +33,7 @@ Do note Fork3X doesn't attempt to surpass the built-in Studio Tools, although th
   * [Fork3X or F3X?](#fork3x-or-f3x)
   * [Will raidRoleplay work?](#will-raidroleplay-work)
   * [Is there a plugin?](#is-there-a-plugin)
-  * [What are every new feature in Fork3X?](#what-are-every-new-feature-in-fork3x)
+  * [What is every new feature in Fork3X?](#what-is-every-new-feature-in-fork3x)
   * [Your fork damaged my game!](#your-fork-damaged-my-game)
   * [How shall I implement Fork3X?](#how-shall-i-implement-fork3x)
   * [How do I ... in Fork3X?](#how-do-i--in-fork3x)
@@ -58,7 +58,7 @@ Do note Fork3X doesn't attempt to surpass the built-in Studio Tools, although th
 
 ## Setup
 
-### You can find the latest release here
+### You can find the latest release [here](https://github.com/VikkoMakesStuff/Fork3X/releases/latest)
 
 This wiki page explains you how to setup Fork3X, and gives many tips that help you make your game better.
 
@@ -70,7 +70,7 @@ Fork3X introduces new, simple tools that help the player building without headac
 
 > **Marketplace Tool**
 >
-> This seemingly basic tool allows users to find decals easily. With more advanced configuration, it can even search for meshes!
+> This seemingly basic tool allows users to find decals easily. [With more advanced configuration](https://github.com/VikkoMakesStuff/Fork3X/discussions/9), it can even look up meshes!
 >
 > **Text Tool**
 >
@@ -88,7 +88,7 @@ Fork3X introduces new, simple tools that help the player building without headac
 
 ### Security - and many other settings
 
-You can learn how to configure the Options module and discover how you can configure many options with the slowly expanding wiki to easily make your game safer and better for your users.
+You can learn how to configure the Options module and discover how you can configure many options with [the slowly expanding wiki](https://github.com/VikkoMakesStuff/Fork3X/wiki/Installing-and-Maintaining-Fork3X) to easily make your game safer and better for your users.
 
 ### UI Styling
 
@@ -110,9 +110,17 @@ Fork3X offers more properties to configure with most tools, including Massless, 
 
 **Improved weld tool**
 
-The weld tool has become the constraint tool. You can now by default add ropes, rods and hinges to your part for having an easier time building machines and wacky mechanisms.
+The weld tool has become the constraint tool. You can now by default add ropes, rods and hinges to your part to have an easier time building machines and wacky mechanisms.
 
-In the future v3.2.2, YOU can choose the constraints you want. This opens a large palette of possibilities and control over what you deem safe and useful for your game.
+In the future v3.2.2, YOU will be able choose the constraints you want. This will open a large palette of possibilities and control over what you deem safe and useful for your game.
+
+**New effects with the Decorate Tool**
+
+Push the Roblox engine to its limits with 3 new effects added to the Decorate Tool: **Particle Emitters, Selection Boxes and Highlights.** This allows you (and players) to create breathtaking effects and builds.
+
+**Accurate mesh size control**
+
+Having to resize a mesh to fit to your part's boundaries has always been a painful process with meshes with F3X. [With some tweaking](https://github.com/VikkoMakesStuff/Fork3X/discussions/9), you can say goodbye to these issues, and gain precious minutes.
 
 **Saving/Loading**
 
@@ -124,7 +132,7 @@ Although not a top priority, Fork3X narrows the gap between the keyboard-mouse a
 
 ### F3X servers replacement
 
-Fork3X is suited to - if possible - no longer depend on F3X servers, but rather directly on Roblox's services. With some setup here, you can restore the previous experience of F3X with the servers being functional.
+Fork3X is suited to - if possible - no longer depend on F3X servers, but rather directly on Roblox's services. [With some setup here](https://github.com/VikkoMakesStuff/Fork3X/discussions/9), you can restore the previous experience of F3X with the servers being functional.
 
 ### Optimisations
 
@@ -132,9 +140,9 @@ Fork3X uses a lot of clever methods to prevent lag spikes with demanding utiliti
 
 ### Help is always available
 
-You can always explore the wiki here (still a work-in-progress) and ask for help here in order to make Fork3X work how you want it to work.
+You can always explore the wiki [here](https://github.com/VikkoMakesStuff/Fork3X/wiki) (still a work-in-progress) and ask for help [here](https://github.com/VikkoMakesStuff/Fork3X/discussions/categories/q-a) in order to make Fork3X work how you want it to work.
 
-A detailed list of the new features can be found here.
+### A detailed list of the new features can be found here.
 
 ## Q&A
 
@@ -153,9 +161,9 @@ Although raidRoleplay is old, it has proven to work well with Fork3X. Just expec
 
 ### Is there a plugin?
 
-Yes! Although it isn't on the Creator marketplace for the reason you can find here, you can find out how to setup the plugin in the answer below.
+Yes! Although it isn't on the Creator marketplace for the reason you can find [here](#if-fork3x-cant-be-on-the-creator-store-is-it-because-its-unsafe), you can find out how to setup the plugin [here](https://github.com/VikkoMakesStuff/Fork3X/wiki/Installing-and-Maintaining-Fork3X#on-github-plugin-and-in-game).
 
-### What are every new feature in Fork3X?
+### What is every new feature in Fork3X?
 
 You can find a list of them right here (it is slightly outdated):
 
@@ -292,7 +300,7 @@ Fork3X is under a public license, which means I take no responsibility on a misu
 
 ### How shall I implement Fork3X?
 
-You can read this wiki page to find much information to implement your tools well. When upgrading to Fork3X, always remember to let people choose between the original theme (GigsDark) and the new one (CementDark). 
+You can read [this wiki page](https://github.com/VikkoMakesStuff/Fork3X/wiki/Installing-and-Maintaining-Fork3X) to find much information to implement your tools well. When upgrading to Fork3X, always remember to let people choose between the original theme (GigsDark) and the new one (CementDark). 
 
 If you only want to use GigsDark, feel free to replace the CheckTheme setting as done here:
 
@@ -308,7 +316,6 @@ end,
 
 If you have a GitHub account, you can always make a Q&A post in Discussions if you want to get help to accomplish something. Remember each question asked there helps everyone!
 
-
 ### How are profiles and themes different?
 
 Profiles were a former take in customisability, which were essentially based on UI objects. They were very limited and lacked of intuitiveness and should no longer be used in new works.
@@ -321,14 +328,11 @@ Themes are a modern and simpler way to customise the interface. They modify the 
 
 You need little to no scripting knowledges to use them. You can even edit Roact (UI inside script very brief) objects without Roact, which is really reassuring for most people (me included). A tutorial about this is planned, so stay tuned!
 
-
 ### What security features can be covered with Fork3X?
 
-You can find the answer in the Security dropdown here!
-
+You can find the answer in the Security dropdown [here](#what-is-every-new-feature-in-fork3x)!
 
 ### I am using v3.1.1 or lower and experience build losses!
-
 
 Roblox is infamously known for having data serialisation that's problematic with the JSON system. This caused inconsistencies that caused the whole system to become very lossy.
 
@@ -348,13 +352,13 @@ In attempt to comply with the potential rights behind F3X, I:
 - Kept the credits
 - Am open to merge both projects (Right to Fork)
 
-I am always open to discussion if the project appears to be a problem to the main one.
+I am always open to discussion if the project appears to be a problem for the main one.
 
 ### I hate the new UI!
 
 Even if v3.2.0 brings essential improvements to the UI, note that UI designing isn't my thing and that it's completely fine to not like it.
 
-Make sure to follow this in order to revert the previous interface.
+Make sure to follow [this](#how-shall-i-implement-fork3x) in order to revert the previous interface.
 
 ### How is Fork3X's code?
 
@@ -368,7 +372,7 @@ I will try by 2026 to extract a few parts of Fork3X and open-source them alone. 
 
 ### I see you help for BTG, can I hire you for my building game?
 
-**You don't.** I am not for hire, and my point to contribute to this game is to understand the expectations of the community of a building game. **Any request to hire me will get ignored.**
+**You don't.** I am not for hire, and my point to contribute to this game is to understand the expectations of the community of a building game. **Any request to hire me will be ignored.**
 
 ### Can I change the number of save slots?
 
@@ -394,7 +398,7 @@ This means there shouldn't be any particular flaw that may greatly endanger the 
 
 ### I want to support Fork3X!
 
-Not only I am not interested in earning any money with this project, I also want to respect the original creator's potential rights. Earning money over someone's work that's free is very disrespectful and should be avoided.
+Not only I am not interested in earning any money with this project, I also want to respect the original creator's potential rights. Earning money directly (if it's in a game, it's okay) off someone's work that's free is very disrespectful and should be avoided.
 
 ### Why is the DevForum page outdated?
   
