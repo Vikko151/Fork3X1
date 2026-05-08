@@ -4,7 +4,7 @@
 
 ## Welcome to the Fork3X GitHub!
 
-### [(Under maintenance) Try On Roblox](https://www.roblox.com/join/ix61y) | [Roblox Model](https://create.roblox.com/store/asset/74515839665793/Fork3X-Building-Tools-F3X-MOD)
+### [Try On Roblox](https://www.roblox.com/join/ix61y) | [(Under maintenance) Roblox Model](https://create.roblox.com/store/asset/74515839665793/Fork3X-Building-Tools-F3X-MOD)
 
 ### Fork3X is a mod of F3X's building tools and a love letter to modding. ❤️
 
