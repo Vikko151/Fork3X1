@@ -10,7 +10,7 @@ assignees: VikkoMakesStuff
 **Is your change request related to a problem? Please describe.**
 A clear and concise description of what the problem is.
 
-A change request must be made when something doesn't work as you would've expected. Feature requests (to add new features) must be created [here](https://github.com/VikkoMakesStuff/Fork3X/discussions/new?category=ideas).
+A change request must be made when something doesn't work as you would've expected. If you think something is missing and want it added, a feature request (to add new features) must be created [here](https://github.com/VikkoMakesStuff/Fork3X/discussions/new?category=ideas).
 
 **Describe the solution you'd like**
 A clear and concise description of what you want to happen or want to change.
