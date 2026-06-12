@@ -51,7 +51,7 @@ Do note Fork3X doesn't attempt to surpass the built-in Studio Tools, although th
   * [I'm afraid hackers use flaws with Fork3X](#im-afraid-hackers-use-flaws-with-fork3x)
   * [I want to support Fork3X!](#i-want-to-support-fork3x)
   * [Why is the DevForum page outdated?](#why-is-the-devforum-page-outdated)
-  * [If Fork3X can't be on the Creator Store, is it because it's unsafe?](#if-fork3x-cant-be-on-the-creator-store-is-it-because-its-unsafe)
+  * [Why is Fork3X updating so slowly?](#why-is-fork3X-updating-so-slowly)
 
  
 <sup>(generated with [markdown-toc](https://ecotrust-canada.github.io/markdown-toc/); check out their project too!)</sup>
@@ -406,11 +406,7 @@ As I am heavily against age gating the access to culture, I don't want to comple
 
 GitHub is the main place for the Fork3X community as anyone can see what bugs got reported and such, but I might also let people DM me on Discord (13+, please respect this rule as it's here for your safety) to not force people to have a GitHub account to contribute.
 
-### If Fork3X can't be on the Creator Store, is it because it's unsafe?
-  
-The real reason Roblox blocks Fork3X is unknown, but Fork3X uses a method (AssetService:LoadAssetAsync) to estimate a mesh's size that Roblox blacklisted.
+### Why is Fork3X updating so slowly?
 
-This function is sandboxed, meaning that Fork3X will **never**  insert content against your will. It's also simply used to insert the original MeshPart with its original size, and so accurately resize the mesh to the object.
-
-If this answer doesn't satisfy you, the code is available here if you want to make sure it isn't obfuscated.
+As opposed to popular beliefs, no, Fork3X is solo-driven and I (@VikkoMakesStuff) am the only developer behind the project. This makes things such as patching bugs or releasing new features much slower, and I sincerely apologise about that.
 
