@@ -1,24 +1,9 @@
 local module = {}
 
 local HTTPService = game:GetService("HttpService")
-local IsHttpServiceEnabled = true
+local IsHttpServiceEnabled = HTTPService.HttpEnabled
 
 local Webhook = nil
-
-local DidSucceed, Result = pcall(function ()
-
-	local ReturnedAsset = HTTPService:RequestAsync({
-		Url = 'https://google.com',
-	}) 
-
-
-	return ReturnedAsset.Success
-end)
-
--- Determine whether HttpService is enabled based on whether request succeeded
-if (not DidSucceed) and Result:match('Http requests are not enabled') then
-	IsHttpServiceEnabled = false
-end
 
 function module.SetWebhook(WebhookURL)
 	if IsHttpServiceEnabled == false then return end
