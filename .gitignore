@@ -1,2 +1,11 @@
-roblox.toml
-node_modules
+# Project place file
+/Fork3X_Stable.rbxlx
+
+# Roblox Studio lock files
+/*.rbxlx.lock
+/*.rbxl.lock
+
+# The sounds
+/Fork3X/Sounds.rbxmx
+
+sourcemap.json

@@ -1,0 +1,82 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<Meta name="ExplicitAutoJoints">true</Meta>
+	<External>null</External>
+	<External>nil</External>
+	<Item class="BoolValue" referent="RBXAC1A0573D45542C0A87208267DBE1CB0">
+		<Properties>
+			<bool name="Value">false</bool>
+			<BinaryString name="AttributesSerialize"></BinaryString>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+			<bool name="DefinesCapabilities">false</bool>
+			<string name="Name">Loaded</string>
+			<int64 name="SourceAssetId">-1</int64>
+			<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+		</Properties>
+		<Item class="IntValue" referent="RBXC6DC5CC7BA614768903B580614B6EEB6">
+			<Properties>
+				<int64 name="Value">0</int64>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">DescendantCount</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+			<Item class="Script" referent="RBXA2438E288B4F457F83209269320359F5">
+				<Properties>
+					<ProtectedString name="Source"><![CDATA[local Count = script.Parent;
+local Tool = Count.Parent.Parent;
+
+-- Exclude counting autoremoving items (thumbnail and autoupdating script)
+local AutoremovingItemsCount = 10;
+
+-- Provide total count of all descendants
+Count.Value = #Tool:GetDescendants() - AutoremovingItemsCount;]]></ProtectedString>
+					<bool name="Disabled">false</bool>
+					<Content name="LinkedSource"><null></null></Content>
+					<token name="RunContext">0</token>
+					<string name="ScriptGuid">{E0D28035-A4EB-4A51-B48D-705110ED1204}</string>
+					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+					<bool name="DefinesCapabilities">false</bool>
+					<string name="Name">DescendantCounter</string>
+					<int64 name="SourceAssetId">-1</int64>
+					<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+				</Properties>
+			</Item>
+		</Item>
+		<Item class="LocalScript" referent="RBX7EC582654CD34966854D173DC1790DCF">
+			<Properties>
+				<ProtectedString name="Source"><![CDATA[local Indicator = script.Parent;
+local Tool = Indicator.Parent;
+
+-- Wait for tool to load completely
+local TotalDescendants = (Indicator:WaitForChild 'DescendantCount');
+
+if TotalDescendants.Value == 0 then
+	TotalDescendants.Changed:Wait()
+end
+
+while not (#Tool:GetDescendants() >= TotalDescendants.Value) do
+	task.wait(0.001);
+end;
+
+-- Set load indicator to true upon load completion
+Indicator.Value = true;]]></ProtectedString>
+				<bool name="Disabled">false</bool>
+				<Content name="LinkedSource"><null></null></Content>
+				<token name="RunContext">0</token>
+				<string name="ScriptGuid">{E0A126E8-30A0-4891-A7DD-937C1643B784}</string>
+				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+				<bool name="DefinesCapabilities">false</bool>
+				<string name="Name">ReplicationListener</string>
+				<int64 name="SourceAssetId">-1</int64>
+				<SharedString name="Tags">yuZpQdnvvUBOTYh1jqZ2cA==</SharedString>
+			</Properties>
+		</Item>
+	</Item>
+	<SharedStrings>
+		<SharedString md5="yuZpQdnvvUBOTYh1jqZ2cA=="></SharedString>
+	</SharedStrings>
+</roblox>
