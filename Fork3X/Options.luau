@@ -898,4 +898,4 @@ end
 
 Settings.VariableSettings = {}
 
-return table.freeze(Settings)
+return Settings
