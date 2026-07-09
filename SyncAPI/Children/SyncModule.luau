@@ -456,9 +456,6 @@ function SyncModule.ConvertPartToType(Part, Type, Params)
 		return Part
 	end
 
-	-- Get the common properties through both classes
-	local CommonProperties = SyncModule.PropScan.GetCommonPropertiesFromClasses(CurrentType, Type)
-
 	local NewPart
 	local FutureSize
 	local SpecialMeshToRestore
@@ -1641,12 +1638,34 @@ local Actions = {
 			end;
 		end;
 
+		-- Enumerate every possible surface property
+		local NameToSurface = {
+			Right = "RightSurface",
+			Top = "TopSurface",
+			Back = "BackSurface",
+			Left = "LeftSurface",
+			Bottom = "BottomSurface",
+			Front = "FrontSurface",
+		}
+
 		-- Perform each change
 		for Part, Change in pairs(ChangeSet) do
 
 			-- Apply each surface change
 			for Surface, SurfaceType in pairs(Change.Surfaces) do
-				Part[Surface .. 'Surface'] = SurfaceType;
+				-- Get the surface's name (if it exists)
+				local SurfaceName = NameToSurface[Surface]
+
+				-- Make sure it exists
+				assert(SurfaceName, "[FORK3X]: An invalid surface name was submitted. Aborting.")
+
+				-- Also check the surface type
+				assert(typeof(SurfaceType) == "EnumItem" 
+					and SurfaceType.EnumType == Enum.SurfaceType,
+					"[FORK3X]: An invalid surface type has been submitted. Aborting.")
+
+				-- If everything is correct, set the new surface type
+				Part[SurfaceName] = SurfaceType;
 			end;
 
 		end;
