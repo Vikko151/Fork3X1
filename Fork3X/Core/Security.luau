@@ -129,29 +129,6 @@ function Security.IsAreaAuthorizedForPlayer(Area, Player)
 			elseif Permission.TeamName and Player.Team and Player.Team.Name == Permission.TeamName then
 				return true;
 			end;
-
-			-- Check BC permissions
-		elseif Permission.Type == 'NoBC' then
-			if Player.MembershipType == Enum.MembershipType.None then
-				return true;
-			end;
-		elseif Permission.Type == 'AnyBC' then
-			if Player.MembershipType ~= Enum.MembershipType.None then
-				return true;
-			end;
-		elseif Permission.Type == 'BC' then
-			if Player.MembershipType == Enum.MembershipType.BuildersClub then
-				return true;
-			end;
-		elseif Permission.Type == 'TBC' then
-			if Player.MembershipType == Enum.MembershipType.TurboBuildersClub then
-				return true;
-			end;
-		elseif Permission.Type == 'OBC' then
-			if Player.MembershipType == Enum.MembershipType.OutrageousBuildersClub then
-				return true;
-			end;
-
 			-- Check custom permissions
 		elseif Permission.Type == 'Callback' then
 			return Permission.Callback(Player);
