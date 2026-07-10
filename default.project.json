@@ -7,6 +7,11 @@
       "Building Tools": {
         "$className": "Tool",
         "$path": "Fork3X",
+        "$properties": {
+          "Grip": [0, 0, 0.4, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+          "CanBeDropped": false,
+          "RequiresHandle": false
+        },
         "SyncAPI": {
           "$className": "BindableFunction",
           "$path": "SyncAPI/Children",

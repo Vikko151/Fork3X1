@@ -2,9 +2,9 @@
 	<Meta name="ExplicitAutoJoints">true</Meta>
 	<External>null</External>
 	<External>nil</External>
-	<Item class="StringValue" referent="RBXB04553AC75E646E0BB4B7327A123D040">
+	<Item class="NumberValue" referent="RBX57C58FF9F3694F31AC2204A2FE4018DA">
 		<Properties>
-			<string name="Value">3.2.2.4</string>
+			<double name="Value">2</double>
 			<BinaryString name="AttributesSerialize"></BinaryString>
 			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 			<bool name="DefinesCapabilities">false</bool>

@@ -47,7 +47,12 @@ local Addon = {
 			return function(Core)
 				local IsHttpServiceDisabled = (Core.Mode == 'Tool') and
 					not Core.SyncAPI:Invoke('IsHttpServiceEnabled')
-				if Core.Options.ShowHttpRequestsWarning == true and Core.Options.EnableAPIs ~= true and Core.AddNotification then
+				
+				if Core.Options.ShowHttpRequestsWarning == true and Core.Options.EnableAPIs ~= true and IsHttpServiceDisabled then
+					if not Core.AddNotification then
+						repeat task.wait(0.1) until Core.AddNotification
+					end
+
 					Core.AddNotification:Fire({
 						ThemeColor = Color3.fromRGB(255, 0, 4);
 						NoticeText = 'HTTP requests must be <b>enabled</b> for some features of Building Tools to work, including exporting.';

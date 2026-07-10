@@ -1,11 +1,9 @@
+
 -- Offers an Options module that can be merged with the given one
 -- This module is a Long-Term Support one. If you want to get back the default one, insert back the building tools!
 
 local Tool = script.Parent.Parent
 local Support = require(script.Parent.SupportLibrary)
-local ImportCooldown = 0
-local LastCopy = 0
-local Settings
 
 local Settings = {}
 
@@ -94,6 +92,20 @@ local OrganisedSettings = {
 		-- Although Fork3X filters the raw text, Roblox may still be fooled by the rich text markers
 		-- If you're worried about the above, you can disable this option
 		CanUseRichText = true,
+
+		-- When enabled, the settings cannot be edited during runtime
+		-- If you need to modify the settings during runtime, you can disable this setting
+		-- In other situations, it's recommended to leave this set to true to prevent backdoors from modifying the options module (although it's extremely rare)
+		FreezeSettings = true,
+	
+		-- The following settings are settings that were formerly present inside the Security module
+		-- Feel free to tweak them here so you can easily transfer your configuration when updating
+
+		-- The distance above the area-defining part that counts as part of the area
+		AreaHeight = 500;
+
+		-- Whether to allow building outside of private areas
+		AllowPublicBuilding = true;
 	},
 
 	--------------------------------------
@@ -1012,7 +1024,9 @@ return function(PreviousOptions)
 		end
 	end
 	
-	table.freeze(NewOptions)
-	
+	if NewOptions.FreezeSettings then
+		table.freeze(NewOptions)
+	end
+
 	return NewOptions
 end--table.freeze(Settings)
