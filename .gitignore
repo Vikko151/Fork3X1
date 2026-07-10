@@ -1,2 +1,4 @@
-roblox.toml
-node_modules
+# The sounds
+/Fork3X/Sounds.rbxmx
+
+sourcemap.json
