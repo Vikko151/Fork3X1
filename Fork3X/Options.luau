@@ -910,4 +910,4 @@ end
 
 Settings.VariableSettings = {}
 
-return if Settings.FreezeTable then table.freeze(Settings) else Settings
+return if Settings.FreezeSettings then table.freeze(Settings) else Settings
