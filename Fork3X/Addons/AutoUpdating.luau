@@ -107,6 +107,17 @@ local Addon = {
 					NewTool = NewTool:FindFirstChildOfClass("Tool")
 					-- Prevent update attempt loops since fetched version is now cached
 					--NewTool.AutoUpdate.Value = false;
+					
+					-- Cancel replacing current tool if fetched version is the same
+					if NewTool.Version.Value == Tool.Version.Value then
+						
+						DescendantCount.Value = 0
+						DescendantCounter.Enabled = true
+					
+						OriginalValue(SyncModule)
+											
+						return;
+					end;
 
 					-- Detach update script from tool and save old tool parent
 					script.Parent = nil;
