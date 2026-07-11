@@ -42,7 +42,9 @@ local UpdateCheck = ChosenAddonsFolder:GetAttribute("AutoUpdatingPatch") or Chos
 
 -- Purge any remainder in the case of a faulty update
 if not UpdateCheck then
-	local UI = Core.Player.PlayerGui:WaitForChild('Building Tools by F3X (UI)', 0.5)
+	local Container = Core.Plugin and game:GetService("CoreGui") or Core.Player.PlayerGui
+
+	local UI = Container:WaitForChild('Building Tools by F3X (UI)', 0.5)
 
 	if UI then
 		UI:Destroy()
