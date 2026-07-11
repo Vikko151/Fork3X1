@@ -110,8 +110,12 @@ local Addon = {
 					
 					-- Cancel replacing current tool if fetched version is the same
 					if NewTool.Version.Value == Tool.Version.Value then
-						OriginalValue(SyncModule)
 						
+						DescendantCount.Value = 0
+						DescendantCounter.Enabled = true
+					
+						OriginalValue(SyncModule)
+											
 						return;
 					end;
 
