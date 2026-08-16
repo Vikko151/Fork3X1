@@ -1,3 +1,9 @@
+
+> [!IMPORTANT]
+> The creator of Fork3X (@VikkoMakesStuff) is currently on a break, which means Fork3X will temporarily experience more delays concerning fixes, updates, and such.
+>
+> This break is important to ensure quality content and help, so thanks for being patient during the following weeks.
+
 <div align="center">
 
 <img width="128" height="128" alt="fork3xtransparent" src="https://github.com/user-attachments/assets/c79cab95-49d5-444d-9c76-618e526f2b52" />
